@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum Contract Interaction</title>
+</head>
+<body>
+    <h1>Interact with Ethereum Contract</h1>
+    <button id="connect-wallet">Connect Wallet</button>
+    <p id="wallet-address"></p>
+    <button id="call-contract" disabled>Call Contract</button>
+    
+    <script type="module">
+        import { createPublicClient, createWalletClient, http, defineChain, parseEther, custom } from 'https://esm.sh/viem'
+        import contractABI from './contracts/abi.js'; // For ES Modules
+        
+        // Define your custom chain
+        const customChain = defineChain({
+            id: 1992, // Replace with your custom chain ID
+            name: 'Sanko Testnet',
+            network: 'custom',
+            nativeCurrency: {
+                decimals: 18,
+                name: 'DMT',
+                symbol: 'DMT',
+            },
+            rpcUrls: {
+                default: {
+                    http: ['https://sanko-arb-sepolia.rpc.caldera.xyz/http'], // Replace with your custom RPC URL
+                },
+            },
+        })
+        
+        // Create a public client for interacting with the blockchain
+        const client = createPublicClient({
+            chain: customChain,
+            transport: http(),
+        })
+        
+        // Connect Wallet
+        const connectWalletButton = document.getElementById('connect-wallet')
+        const walletAddressDisplay = document.getElementById('wallet-address')
+        const callContractButton = document.getElementById('call-contract')
+        
+        connectWalletButton.addEventListener('click', async () => {
+            if (window.ethereum) {
+                try {
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                    const address = accounts[0]
+                    
+                    walletAddressDisplay.textContent = `Connected: ${address}`
+                    callContractButton.disabled = false
+                } catch (error) {
+                    console.error('User denied account access', error)
+                }
+            } else {
+                alert('Please install MetaMask or another Ethereum wallet.')
+            }
+        })
+        
+        // Call Contract
+        callContractButton.addEventListener('click', async () => {
+            if (!window.ethereum) {
+                alert('Please connect your wallet first.')
+                return
+            }            
+            
+            const contractAddress = '0xadB6bbD4F992d9F97C9c3FD783B86C2a24E28ae3' // Replace with your contract address
+            // Replace with your contract ABI
+            
+            // Create a wallet client for signing transactions
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+            const walletClient = createWalletClient({ 
+                account: accounts[0],
+                chain: customChain,
+                transport: custom(window.ethereum),
+            })
+            
+            console.log('Address:', accounts[0])
+            const balance = await client.getBalance({
+                address: accounts[0],
+            })
+            console.log('Balance:', balance)
+            
+            const data = await walletClient.writeContract({
+                address: contractAddress,
+                abi: contractABI,
+                functionName: 'createGame', // Replace with your function name
+                args: ['0xdBec3DC802a817EEE74a7077f734654384857E9d', parseEther('0.02')], // Replace with your function arguments (if any)
+                value : parseEther('0.02'),
+            })
+            
+            console.log('Contract call result:', data)
+        })
+    </script>
+</body>
+</html>

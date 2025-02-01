@@ -3,18 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethereum Contract Interaction</title>
+    <title>Match Making Service</title>
 </head>
 <body>
-    <h1>Interact with Ethereum Contract</h1>
+    <h1>Match Making Service</h1>
     <button id="connect-wallet">Connect Wallet</button>
     <p id="wallet-address"></p>
+    <div id="balance">Balance: 0 DMT</div>
+    <a href="https://sanko-arb-sepolia.hub.caldera.xyz/">Get tDMT</a>
+
+    <h2>Create a game</h2>
+    <!-- Dropdown to select a governor -->
+    <label for="governor-select">Select Governor:</label>
+    <select id="governor-select">
+        <option value="0xdBec3DC802a817EEE74a7077f734654384857E9d">House Coinflip</option>
+        <!-- Add more governors here if needed -->
+    </select>
+    
+    <!-- Input box for the amount -->
+    <label for="amount-input">Amount (DMT):</label>
+    <input type="text" id="amount-input" placeholder="Enter amount">
+    
     <button id="call-contract" disabled>Call Contract</button>
+
+    <h2>Open Games</h2>
+    <div id="open-games"></div>
     
     <script type="module">
-        import { createPublicClient, createWalletClient, http, defineChain, parseEther, custom } from 'https://esm.sh/viem'
+        import { createPublicClient, createWalletClient, http, defineChain, parseEther, formatEther, custom } from 'https://esm.sh/viem'
         import contractABI from './contracts/abi.js'; // For ES Modules
-        
+        const contractAddress = '0xadB6bbD4F992d9F97C9c3FD783B86C2a24E28ae3' // Replace with your matchmaking instance address
+
         // Define your custom chain
         const customChain = defineChain({
             id: 1992, // Replace with your custom chain ID
@@ -42,6 +61,27 @@
         const connectWalletButton = document.getElementById('connect-wallet')
         const walletAddressDisplay = document.getElementById('wallet-address')
         const callContractButton = document.getElementById('call-contract')
+        const balanceDisplay = document.getElementById('balance')
+        const governorSelect = document.getElementById('governor-select')
+        const amountInput = document.getElementById('amount-input')
+        const openGamesDisplay = document.getElementById('open-games')
+
+                
+        const updateBalance = async (address) => {
+            const balance = await client.getBalance({
+                address: address,
+            })
+            balanceDisplay.textContent = `Balance: ${balance} DMT`
+        }
+        
+        // Refresh balance when clicked
+        balanceDisplay.addEventListener('click', async () => {
+            if (window.ethereum) {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                const address = accounts[0]
+                await updateBalance(address)
+            }
+        })
         
         connectWalletButton.addEventListener('click', async () => {
             if (window.ethereum) {
@@ -66,9 +106,15 @@
                 alert('Please connect your wallet first.')
                 return
             }            
+
+            // Get the selected governor and amount
+            const selectedGovernor = governorSelect.value
+            const amount = amountInput.value
             
-            const contractAddress = '0xadB6bbD4F992d9F97C9c3FD783B86C2a24E28ae3' // Replace with your contract address
-            // Replace with your contract ABI
+            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+                alert('Please enter a valid amount.')
+                return
+            }
             
             // Create a wallet client for signing transactions
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
@@ -78,22 +124,79 @@
                 transport: custom(window.ethereum),
             })
             
-            console.log('Address:', accounts[0])
-            const balance = await client.getBalance({
-                address: accounts[0],
-            })
-            console.log('Balance:', balance)
-            
+            await updateBalance(accounts[0])
+
             const data = await walletClient.writeContract({
                 address: contractAddress,
                 abi: contractABI,
                 functionName: 'createGame', // Replace with your function name
-                args: ['0xdBec3DC802a817EEE74a7077f734654384857E9d', parseEther('0.02')], // Replace with your function arguments (if any)
-                value : parseEther('0.02'),
+                args: [selectedGovernor, parseEther(amount)], // Use selected governor and amount
+                value: parseEther(amount),
             })
             
             console.log('Contract call result:', data)
         })
+
+        // Function to poll open games
+        const pollOpenGames = async () => {
+            const notStartedGames = await client.readContract({
+                address: contractAddress,
+                abi: contractABI,
+                functionName: 'getNotStartedGames',
+            })
+
+            openGamesDisplay.innerHTML = ''
+            if (notStartedGames.length > 0) {
+                notStartedGames.forEach(async gameId => {
+                    const gameElement = document.createElement('div')
+                    gameElement.textContent = `${gameId}: `
+
+                    const gameInfo = await client.readContract({
+                        address: contractAddress,
+                        abi: contractABI,
+                        functionName: 'getGame',
+                        args: [gameId],
+                    })
+
+                    gameElement.textContent += `governor: ${gameInfo[0]} bet: ${formatEther(gameInfo[1])} DMT`
+                    const joinButton = document.createElement('button')
+                    joinButton.textContent = 'Join'
+                    joinButton.addEventListener('click', async () => {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                        const walletClient = createWalletClient({ 
+                            account: accounts[0],
+                            chain: customChain,
+                            transport: custom(window.ethereum),
+                        })
+
+                        const data = await walletClient.writeContract({
+                            address: contractAddress,
+                            abi: contractABI,
+                            functionName: 'joinGame',
+                            args: [gameId],
+                            value: gameInfo[1],
+                        })
+
+                        console.log('Contract call result:', data)
+                    })
+
+                    gameElement.appendChild(joinButton)
+                    openGamesDisplay.appendChild(gameElement)
+
+
+                })
+            } else {
+                openGamesDisplay.innerHTML += '<p>No open games available.</p>'
+            }
+        }
+
+        // Initial poll for open games
+        if (window.ethereum) {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+            if (accounts.length > 0) {
+                await pollOpenGames()
+            }
+        }
     </script>
 </body>
 </html>

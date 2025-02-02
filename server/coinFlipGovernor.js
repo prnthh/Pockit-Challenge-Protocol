@@ -1,14 +1,13 @@
-const ethers = require("ethers");
-const dotenv = require("dotenv");
-const Governor = require("./governor");
+import {ethers} from "ethers";
+import dotenv from "dotenv";
+import Governor from "./governor.js";
 dotenv.config();
-
 
 const coinGovernor = new Governor(process.env.governorPrivateKey, 
     process.env.matchmakingContractAddress, 
     async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
         let game = await contract.getGame(gameId);
-        let players = game[4];
+        let players = game.players;
 
         // check conditions to start the game
         if (players.length >= 2) return;
@@ -16,13 +15,13 @@ const coinGovernor = new Governor(process.env.governorPrivateKey,
         
         if (!players.includes(wallet.address)) {
             console.log("Joining game as governor...");
-            const joinTx = await contract.joinGame(gameId, { value: game[1] });
+            const joinTx = await contract.joinGame(gameId, { value: game.stakeAmount });
             await joinTx.wait();
             console.log("Governor joined the game");
         }
         
         game = await contract.getGame(gameId);
-        players = game[4];
+        players = game.players;
         
         console.log("Setting game ready...");
         const readyTx = await contract.setGameReady(gameId);

@@ -214,34 +214,41 @@ const abi = [
 		"name": "getGame",
 		"outputs": [
 			{
-				"internalType": "address",
-				"name": "governor",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "stakeAmount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "isReady",
-				"type": "bool"
-			},
-			{
-				"internalType": "bool",
-				"name": "isEnded",
-				"type": "bool"
-			},
-			{
-				"internalType": "address[]",
-				"name": "players",
-				"type": "address[]"
-			},
-			{
-				"internalType": "address[]",
-				"name": "losers",
-				"type": "address[]"
+				"components": [
+					{
+						"internalType": "address",
+						"name": "governor",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "stakeAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isReady",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "isEnded",
+						"type": "bool"
+					},
+					{
+						"internalType": "address[]",
+						"name": "players",
+						"type": "address[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "losers",
+						"type": "address[]"
+					}
+				],
+				"internalType": "struct GameEscrow.GameInfo",
+				"name": "",
+				"type": "tuple"
 			}
 		],
 		"stateMutability": "view",

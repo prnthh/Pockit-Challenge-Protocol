@@ -32,7 +32,7 @@
     <script type="module">
         import { createPublicClient, createWalletClient, http, defineChain, parseEther, formatEther, custom } from 'https://esm.sh/viem'
         import contractABI from './contracts/abi.js'; // For ES Modules
-        const contractAddress = '0xadB6bbD4F992d9F97C9c3FD783B86C2a24E28ae3' // Replace with your matchmaking instance address
+        const contractAddress = '0xFdFF903dD0d08Ee6979e1a247416af3653B1a391' // Replace with your matchmaking instance address
 
         // Define your custom chain
         const customChain = defineChain({
@@ -158,7 +158,7 @@
                         args: [gameId],
                     })
 
-                    gameElement.textContent += `governor: ${gameInfo[0]} bet: ${formatEther(gameInfo[1])} DMT`
+                    gameElement.textContent += `governor: ${gameInfo.governor} bet: ${formatEther(gameInfo.stakeAmount)} DMT`
                     const joinButton = document.createElement('button')
                     joinButton.textContent = 'Join'
                     joinButton.addEventListener('click', async () => {

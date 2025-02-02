@@ -1,20 +1,10 @@
-const ethers = require("ethers");
-const dotenv = require("dotenv");
-const Governor = require("../governor");
+import {ethers} from "ethers";
+import dotenv from "dotenv";
 dotenv.config();
 
-const provider = new ethers.JsonRpcProvider("https://sanko-arb-sepolia.rpc.caldera.xyz/http");
-const contractABI = [
-    "function createGame(address governor, uint256 stakeAmount) external payable returns (uint256)",
-    "function joinGame(uint256 gameId) external payable",
-    "function setGameReady(uint256 gameId) external",
-    "function addLoser(uint256 gameId, address loser) external",
-    "function endGame(uint256 gameId) external",
-    "function getGame(uint256 gameId) external view returns (address,uint256,bool,bool,address[],address[])",
-    "function getNotStartedGames() external view returns (uint256[])",
-    "function getOngoingGames() external view returns (uint256[])",
-];
+import contractABI from "./abi.js";
 
+const provider = new ethers.JsonRpcProvider("https://sanko-arb-sepolia.rpc.caldera.xyz/http");
 
 async function player1MakeGame(stakeAmount) {
     const playerwallet = new ethers.Wallet(process.env.playerpkey, provider);

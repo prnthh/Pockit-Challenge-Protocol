@@ -1,6 +1,5 @@
-const ethers = require("ethers");
-const dotenv = require("dotenv");
-const Governor = require("./governor");
+import dotenv from "dotenv";
+import Governor from "./governor.js";
 dotenv.config();
 
 const twoPlayerCoinGovernor = new Governor(
@@ -8,7 +7,7 @@ const twoPlayerCoinGovernor = new Governor(
     process.env.matchmakingContractAddress,
     async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
         let game = await contract.getGame(gameId);
-        let players = game[4];
+        let players = game.players;
 
         // Wait until there are exactly two players in the game
         if (players.length < 2) {

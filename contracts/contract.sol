@@ -24,6 +24,15 @@ contract GameEscrow {
         mapping(address => bool) isLoser;
     }
 
+    struct GameInfo {
+        address governor;
+        uint256 stakeAmount;
+        bool isReady;
+        bool isEnded;
+        address[] players;
+        address[] losers;
+    }
+
     bool private _notEntered = true;
     mapping(uint256 => Game) public games;
     uint256 public nextGameId;
@@ -128,23 +137,16 @@ contract GameEscrow {
         emit GameEnded(gameId);
     }
 
-    function getGame(uint256 gameId) external view returns (
-        address governor,
-        uint256 stakeAmount,
-        bool isReady,
-        bool isEnded,
-        address[] memory players,
-        address[] memory losers
-    ) {
+       function getGame(uint256 gameId) external view returns (GameInfo memory) {
         Game storage game = games[gameId];
-        return (
-            game.governor,
-            game.stakeAmount,
-            game.isReady,
-            game.isEnded,
-            game.players,
-            game.losers
-        );
+        return GameInfo({
+            governor: game.governor,
+            stakeAmount: game.stakeAmount,
+            isReady: game.isReady,
+            isEnded: game.isEnded,
+            players: game.players,
+            losers: game.losers
+        });
     }
 
     function getNotStartedGames() external view returns (uint256[] memory) {

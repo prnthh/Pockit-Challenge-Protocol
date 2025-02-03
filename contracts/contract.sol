@@ -119,18 +119,21 @@ contract GameEscrow {
             }
         }
 
-        require(winnerCount > 0, "No winners");
+        if (winnerCount == 0) {
+            (bool success, ) = game.governor.call{value: totalPrize}("");
+            require(success, "Governor transfer failed");
+        } else {
+            // Calculate prize per winner
+            uint256 totalPrize = game.stakeAmount * game.players.length;
+            uint256 prizePerWinner = totalPrize / winnerCount;
 
-        // Calculate prize per winner
-        uint256 totalPrize = game.stakeAmount * game.players.length;
-        uint256 prizePerWinner = totalPrize / winnerCount;
-
-        // Distribute prizes
-        for (uint256 i = 0; i < game.players.length; i++) {
-            address player = game.players[i];
-            if (!game.isLoser[player]) {
-                (bool success, ) = player.call{value: prizePerWinner}("");
-                require(success, "Transfer failed");
+            // Distribute prizes
+            for (uint256 i = 0; i < game.players.length; i++) {
+                address player = game.players[i];
+                if (!game.isLoser[player]) {
+                    (bool success, ) = player.call{value: prizePerWinner}("");
+                    require(success, "Transfer failed");
+                }
             }
         }
 

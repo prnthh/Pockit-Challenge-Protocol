@@ -36,7 +36,7 @@ class Governor {
                     const governor = game.governor; // Extract the assigned governor
                     if (governor.toLowerCase() !== this.wallet.address.toLowerCase()) {
                         console.log(`Skipping game ${gameId}, not the assigned governor.`);
-                        return;
+                        continue;
                     }
                     
 

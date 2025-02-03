@@ -47,6 +47,11 @@ const abi = [
 				"internalType": "uint256",
 				"name": "gameId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "governorFeePercentage",
+				"type": "uint256"
 			}
 		],
 		"name": "endGame",
@@ -119,6 +124,17 @@ const abi = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_houseFeePercentage",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -165,6 +181,13 @@ const abi = [
 			}
 		],
 		"name": "setGameReady",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -282,12 +305,38 @@ const abi = [
 	},
 	{
 		"inputs": [],
+		"name": "houseFeePercentage",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "nextGameId",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",

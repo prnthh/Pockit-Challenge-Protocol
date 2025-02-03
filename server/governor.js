@@ -6,11 +6,12 @@ dotenv.config();
 const provider = new ethers.JsonRpcProvider("https://sanko-arb-sepolia.rpc.caldera.xyz/http");
 
 class Governor {
-    constructor(privateKey, matchMakingContractAddress, gameHandler) {
+    constructor(privateKey, matchMakingContractAddress, fee, gameHandler) {
         this.handledGames = new Set();
         this.matchMakingContractAddress = matchMakingContractAddress;
         this.wallet = new ethers.Wallet(privateKey, provider);
         this.gameHandler = gameHandler;
+        this.fee = fee;
     }
     
     async pollForNewGames() {
@@ -50,7 +51,7 @@ class Governor {
                         await loserTx.wait();
                         
                         console.log("Ending game...");
-                        const endTx = await contract.endGame(gameId);
+                        const endTx = await contract.endGame(gameId, this.fee);
                         await endTx.wait();
                         console.log("Game ended");
                     });

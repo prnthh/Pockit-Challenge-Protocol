@@ -5,6 +5,7 @@ dotenv.config();
 
 const coinGovernor = new Governor(process.env.governorPrivateKey, 
     process.env.matchmakingContractAddress, 
+    2,
     async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
         let game = await contract.getGame(gameId);
         let players = game.players;
@@ -28,9 +29,9 @@ const coinGovernor = new Governor(process.env.governorPrivateKey,
         await readyTx.wait();
         console.log("Game is ready");
         
-        
-        console.log("Flipping coin...", players);
-        const loser = Math.random() < 0.5 ? players[0] : players[1];
+        const result = Math.random() < 0.5;
+        console.log("Flipping coin...", result);
+        const loser = result ? players[0] : players[1];
         console.log(`Loser is: ${loser}`);
         
         onGameResolved(loser);

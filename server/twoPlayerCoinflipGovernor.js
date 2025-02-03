@@ -5,6 +5,7 @@ dotenv.config();
 const twoPlayerCoinGovernor = new Governor(
     process.env.governorPrivateKey,
     process.env.matchmakingContractAddress,
+    2,
     async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
         let game = await contract.getGame(gameId);
         let players = game.players;

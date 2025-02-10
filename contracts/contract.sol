@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-contract GameEscrow {
-    modifier nonReentrant() {
-        require(_notEntered, "Reentrant call");
-        _notEntered = false;
-        _;
-        _notEntered = true;
-    }
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+contract GameEscrow is ReentrancyGuard {
     modifier onlyGovernor(uint256 gameId) {
         require(games[gameId].governor == msg.sender, "Not governor");
         _;
@@ -38,7 +33,6 @@ contract GameEscrow {
         address[] losers;
     }
 
-    bool private _notEntered = true;
     mapping(uint256 => Game) public games;
     uint256 public nextGameId;
     address public owner;

@@ -1,13 +1,23 @@
 {
   "name": "@pockit/challenge-protocol",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A protocol for matchmaking and game governance on EVM based blockchains.",
   "main": "src/index.js",
   "scripts": {
+    "prepublishOnly": "npm pack",
     "coinflip": "node server/coinFlipGovernor.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "blockchain",
+    "evm",
+    "game",
+    "governance",
+    "matchmaking",
+    "ethers"
+  ],
   "author": "prnth",
+  "homepage": "https://github.com/prnthh/Pockit-Challenge-Protocol",
   "license": "ISC",
   "dependencies": {
     "ethers": "^6.13.5"

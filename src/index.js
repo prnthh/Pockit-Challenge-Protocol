@@ -1,6 +1,6 @@
 // src/index.js
-const { ethers } = require("ethers");
-const defaultABI = require("../contracts/abi.js");
+import { ethers } from "ethers";
+import defaultABI from "../contracts/abi.js";
 
 class Governor {
     constructor({
@@ -43,41 +43,38 @@ class Governor {
         }
     }
     
-    /** Resolve the game by adding losers and ending it */
     async resolveGame(gameId, losers, contract) {
         try {
             for (const loser of losers) {
                 await this.retryTx(() => contract.addLoser(gameId, loser));
             }
             await this.retryTx(() => contract.endGame(gameId, this.fee));
-            console.log(`Game ${gameId} has been finalized.`);
+            console.log(`[PCP] Game ${gameId} has been finalized.`);
         } catch (error) {
             console.error(`Error resolving game ${gameId}:`, error);
             throw error;
         }
     }
     
-    /** Mark the game as ready to be handled */
     async readyUpGame(gameId, contract) {
         try {
             await this.retryTx(() => contract.setGameReady(gameId));
-            console.log(`Game ${gameId} is now being handled.`);
+            console.log(`[PCP] Game ${gameId} is now being handled.`);
         } catch (error) {
             console.error(`Error marking game ${gameId} as handled:`, error);
             throw error;
         }
     }
     
-    /** Poll for new games and handle them */
     async pollForNewGames(pollingIntervalMs = 5000) {
-        console.log(`Governor Address: ${this.wallet.address}`);
+        console.log(`[PCP] Governor Address: ${this.wallet.address}`);
         
         while (true) {
             try {
                 const nowBalance = await this.provider.getBalance(this.wallet.address);
                 if (!nowBalance.eq(this.balance)) {
                     this.balance = nowBalance;
-                    console.log(`Balance: ${ethers.utils.formatEther(this.balance)}`);
+                    console.log(`[PCP] Balance: ${ethers.formatEther(this.balance)}`);
                 }
                 
                 if (!this.matchMakingContractAddress) {
@@ -99,7 +96,7 @@ class Governor {
                     if (
                         game.governor.toLowerCase() !== this.wallet.address.toLowerCase()
                     ) {
-                        console.log(`Skipping game ${gameId} (not the assigned governor).`);
+                        console.log(`[PCP] Skipping game ${gameId} (not the assigned governor).`);
                         continue;
                     }
                     
@@ -130,4 +127,4 @@ class Governor {
     }
 }
 
-module.exports = Governor;
+export default Governor;

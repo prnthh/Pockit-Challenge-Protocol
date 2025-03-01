@@ -22,7 +22,7 @@ class Governor {
         this.gameHandler = gameHandler;
         this.contractABI = contractABI;
         this.activeGames = new Map();
-        this.balance = ethers.BigNumber.from(0);
+        this.balance = 0;
     }
     
     async retryTx(txFunction, maxRetries = 5, delayMs = 2000) {
@@ -72,7 +72,7 @@ class Governor {
         while (true) {
             try {
                 const nowBalance = await this.provider.getBalance(this.wallet.address);
-                if (!nowBalance.eq(this.balance)) {
+                if (nowBalance !== this.balance) {
                     this.balance = nowBalance;
                     console.log(`[PCP] Balance: ${ethers.formatEther(this.balance)}`);
                 }

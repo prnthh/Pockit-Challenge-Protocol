@@ -17,7 +17,7 @@ const Governor = require('@pockit/challenge-protocol');
 
 const gov = new Governor({
   privateKey: 'governor-private-key',
-  matchMakingContractAddress: '0xYourContractAddress',
+  matchMakingContractAddress: '0xb8f26231ab263ed6c85f2a602a383d597936164b', // sanko mainnet
   fee: 2,
 gameHandler: async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
     // Fetch game details from the contract

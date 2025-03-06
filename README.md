@@ -50,6 +50,16 @@ gameHandler: async (gameId, wallet, contract, onGameHandled, onGameResolved) => 
 gov.pollForNewGames();
 ```
 
+## Existing Contract Deployments
+
+These deployed contracts can be used by anyone (for a 2% fee). Ownership of games is determined by the governor parameter used while calling createGame on a client.
+```
+0xb8f26231ab263ed6c85f2a602a383d597936164b // sanko mainnet
+0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF // sanko testnet
+0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87 // eth mainnet
+```
+Games using the global matchmaking contract are featured on the global leaderboard.
+
 ## API
 
 ### `Governor(options)`

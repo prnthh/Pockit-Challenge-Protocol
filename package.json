@@ -22,6 +22,5 @@
   "dependencies": {
     "viem": "^2.43.3"
   },
-  "packageManager": "pnpm@10.17.1",
   "type": "module"
 }

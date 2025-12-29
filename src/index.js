@@ -65,8 +65,8 @@ class Governor {
             throw error;
         }
     }
-    
-    async pollForNewGames(pollingIntervalMs = 5000) {
+
+    async pollForNewGames(pollingIntervalMs = 5000, startGame = 0, endGame = 100) {
         console.log(`[PCP] Governor Address: ${this.wallet.address}`);
         
         while (true) {
@@ -86,9 +86,9 @@ class Governor {
                     this.contractABI,
                     this.wallet
                 );
-                
-                const gameIds = await contract.getNotStartedGames(0, 100);
-                
+
+                const gameIds = await contract.getNotStartedGames(startGame, endGame);
+
                 for (const gameId of gameIds) {
                     const game = await contract.getGame(gameId);
                     if (!game || game.isEnded) continue;

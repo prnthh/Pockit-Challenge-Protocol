@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { createPublicClient, createWalletClient, http, defineChain, parseEther, formatEther, custom } from 'viem'
 import './App.css'
 

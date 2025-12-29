@@ -6,6 +6,7 @@
   "scripts": {
     "prepublishOnly": "npm pack",
     "coinflip": "node server/coinFlipGovernor.js",
+    "dev": "npm run dev --prefix docs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -19,7 +20,7 @@
   "homepage": "https://github.com/prnthh/Pockit-Challenge-Protocol",
   "license": "ISC",
   "dependencies": {
-    "viem": "^2.37.9"
+    "viem": "^2.43.3"
   },
   "packageManager": "pnpm@10.17.1",
   "type": "module"

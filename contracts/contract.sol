@@ -14,23 +14,35 @@ contract GameEscrow is ReentrancyGuard {
         _;
     }
 
+    // Optimized struct layout: group by type to minimize storage slots
+    // address (20 bytes) + bool (1 byte) + bool (1 byte) = fits in one slot
+    // uint256 values each take one slot
     struct Game {
-        address governor;
-        uint256 stakeAmount;
-        bool isReady;
-        bool isEnded;
-        address[] players;
-        address[] losers;
-        mapping(address => bool) isLoser;
+        address governor;           // Slot 0 (20 bytes)
+        bool isReady;              // Slot 0 (1 byte, packed with governor)
+        bool isEnded;              // Slot 0 (1 byte, packed with governor)
+        uint256 stakeAmount;       // Slot 1
+        uint256 maxPlayers;        // Slot 2
+        address[] players;         // Slot 3
+        address[] losers;          // Slot 4
+        address[] whitelist;       // Slot 5
+        address[] forfeited;       // Slot 6
+        mapping(address => bool) isLoser;       // Slot 7
+        mapping(address => bool) isWhitelisted; // Slot 8
+        mapping(address => bool) hasForfeit;    // Slot 9
+        mapping(address => bool) isPlayer;      // Slot 10 - gas optimization for lookups
     }
 
     struct GameInfo {
         address governor;
         uint256 stakeAmount;
+        uint256 maxPlayers;
         bool isReady;
         bool isEnded;
         address[] players;
         address[] losers;
+        address[] whitelist;
+        address[] forfeited;
     }
 
     mapping(uint256 => Game) public games;
@@ -47,19 +59,37 @@ contract GameEscrow is ReentrancyGuard {
     event PlayerJoined(uint256 indexed gameId, address player);
     event GameReady(uint256 indexed gameId);
     event LoserAdded(uint256 indexed gameId, address loser);
+    event PlayerForfeited(uint256 indexed gameId, address player);
     event GameEnded(uint256 indexed gameId);
 
-    function createGame(address governor, uint256 stakeAmount) external payable returns (uint256) {
+    function createGame(address governor, uint256 stakeAmount, uint256 maxPlayers, address[] calldata whitelist) external payable returns (uint256) {
         require(stakeAmount > 0, "Stake must be positive");
         require(msg.value == stakeAmount, "Incorrect stake amount");
         require(governor != address(0), "Invalid governor");
 
         uint256 gameId = nextGameId++;
         Game storage game = games[gameId];
-        
+
         game.governor = governor;
         game.stakeAmount = stakeAmount;
+        game.maxPlayers = maxPlayers; // 0 means unlimited
         game.players.push(msg.sender);
+        game.isPlayer[msg.sender] = true; // Gas optimization
+
+        // Set up whitelist if provided - use calldata to save gas
+        uint256 whitelistLength = whitelist.length;
+        if (whitelistLength > 0) {
+            for (uint256 i; i < whitelistLength; ) {
+                game.whitelist.push(whitelist[i]);
+                game.isWhitelisted[whitelist[i]] = true;
+                unchecked { ++i; } // Gas optimization - overflow impossible
+            }
+            // Ensure creator is whitelisted
+            if (!game.isWhitelisted[msg.sender]) {
+                game.whitelist.push(msg.sender);
+                game.isWhitelisted[msg.sender] = true;
+            }
+        }
 
         emit GameCreated(gameId, msg.sender, stakeAmount);
         return gameId;
@@ -67,22 +97,62 @@ contract GameEscrow is ReentrancyGuard {
 
     function joinGame(uint256 gameId) external payable nonReentrant {
         Game storage game = games[gameId];
+        require(game.governor != address(0), "Game does not exist");
+        require(!game.isReady, "Game already started");
         require(!game.isEnded, "Game ended");
         require(msg.value == game.stakeAmount, "Incorrect stake amount");
+        require(!game.isPlayer[msg.sender], "Already joined"); // Gas-optimized check
 
-        for (uint256 i = 0; i < game.players.length; i++) {
-            require(game.players[i] != msg.sender, "Already joined");
+        // Check max players if set (0 means unlimited)
+        if (game.maxPlayers > 0) {
+            require(game.players.length < game.maxPlayers, "Game is full");
+        }
+
+        // Check whitelist if it exists
+        if (game.whitelist.length > 0) {
+            require(game.isWhitelisted[msg.sender], "Not whitelisted");
         }
 
         game.players.push(msg.sender);
+        game.isPlayer[msg.sender] = true; // Mark as player
         emit PlayerJoined(gameId, msg.sender);
+    }
+
+    function forfeitGame(uint256 gameId) external nonReentrant {
+        Game storage game = games[gameId];
+        require(!game.isReady, "Game already started");
+        require(!game.isEnded, "Game ended");
+        require(!game.hasForfeit[msg.sender], "Already forfeited");
+        require(game.isPlayer[msg.sender], "Not a player in this game"); // Gas-optimized check
+
+        // Mark player as forfeited
+        game.hasForfeit[msg.sender] = true;
+        game.forfeited.push(msg.sender);
+
+        emit PlayerForfeited(gameId, msg.sender);
+
+        // Check if all players have forfeited
+        uint256 playersLength = game.players.length;
+        if (game.forfeited.length == playersLength) {
+            game.isEnded = true;
+
+            // Refund all players - pull over push pattern would be safer but adds complexity
+            // Using CEI pattern: checks done, effects set, interactions last
+            for (uint256 i; i < playersLength; ) {
+                (bool success, ) = game.players[i].call{value: game.stakeAmount}("");
+                require(success, "Refund failed");
+                unchecked { ++i; }
+            }
+
+            emit GameEnded(gameId);
+        }
     }
 
     function setGameReady(uint256 gameId) external onlyGovernor(gameId) {
         Game storage game = games[gameId];
         require(!game.isEnded, "Game ended");
         require(!game.isReady, "Already ready");
-        
+
         game.isReady = true;
         emit GameReady(gameId);
     }
@@ -92,15 +162,7 @@ contract GameEscrow is ReentrancyGuard {
         require(game.isReady, "Game not ready");
         require(!game.isEnded, "Game ended");
         require(!game.isLoser[loser], "Already marked as loser");
-
-        bool playerFound = false;
-        for (uint256 i = 0; i < game.players.length; i++) {
-            if (game.players[i] == loser) {
-                playerFound = true;
-                break;
-            }
-        }
-        require(playerFound, "Player not in game");
+        require(game.isPlayer[loser], "Player not in game"); // Gas-optimized check
 
         game.losers.push(loser);
         game.isLoser[loser] = true;
@@ -113,26 +175,29 @@ contract GameEscrow is ReentrancyGuard {
         require(game.isReady, "Game not ready");
         require(!game.isEnded, "Game already ended");
         require(houseFeePercentage + governorFeePercentage <= 100, "Total fee exceeds 100%");
-        require(governorFeePercentage <= 100, "Governor fee exceeds 100%");
 
         game.isEnded = true;
 
-        uint256 totalPrize = game.stakeAmount * game.players.length;
+        uint256 playersLength = game.players.length;
+        uint256 totalPrize = game.stakeAmount * playersLength;
         uint256 houseFee = (totalPrize * houseFeePercentage) / 100;
         uint256 governorFee = (totalPrize * governorFeePercentage) / 100;
         uint256 remainingPrize = totalPrize - houseFee - governorFee;
 
-        // Transfer governor fee to governor
+        // Transfer governor fee to governor (follows CEI pattern - checks, effects, interactions)
         if (governorFee > 0) {
             (bool successGov, ) = game.governor.call{value: governorFee}("");
             require(successGov, "Governor transfer failed");
         }
 
-        uint256 winnerCount = 0;
-        for (uint256 i = 0; i < game.players.length; i++) {
-            if (!game.isLoser[game.players[i]]) {
-                winnerCount++;
+        // Count winners - exclude both losers and forfeited players
+        uint256 winnerCount;
+        for (uint256 i; i < playersLength; ) {
+            address player = game.players[i];
+            if (!game.isLoser[player] && !game.hasForfeit[player]) {
+                unchecked { ++winnerCount; }
             }
+            unchecked { ++i; }
         }
 
         if (winnerCount == 0) {
@@ -143,12 +208,13 @@ contract GameEscrow is ReentrancyGuard {
             }
         } else {
             uint256 prizePerWinner = remainingPrize / winnerCount;
-            for (uint256 i = 0; i < game.players.length; i++) {
+            for (uint256 i; i < playersLength; ) {
                 address player = game.players[i];
-                if (!game.isLoser[player]) {
+                if (!game.isLoser[player] && !game.hasForfeit[player]) {
                     (bool success, ) = player.call{value: prizePerWinner}("");
                     require(success, "Transfer failed");
                 }
+                unchecked { ++i; }
             }
         }
 
@@ -160,10 +226,13 @@ contract GameEscrow is ReentrancyGuard {
         return GameInfo({
             governor: game.governor,
             stakeAmount: game.stakeAmount,
+            maxPlayers: game.maxPlayers,
             isReady: game.isReady,
             isEnded: game.isEnded,
             players: game.players,
-            losers: game.losers
+            losers: game.losers,
+            whitelist: game.whitelist,
+            forfeited: game.forfeited
         });
     }
 
@@ -200,6 +269,37 @@ contract GameEscrow is ReentrancyGuard {
         uint256[] memory result = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
             result[i] = ongoingGames[i];
+        }
+
+        return result;
+    }
+
+    function getGovernorGames(address governor, bool includeEnded, bool includeOngoing, bool includeNotStarted) external view returns (uint256[] memory) {
+        uint256[] memory governorGames = new uint256[](nextGameId);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < nextGameId; i++) {
+            if (games[i].governor == governor) {
+                bool shouldInclude = false;
+
+                if (games[i].isEnded && includeEnded) {
+                    shouldInclude = true;
+                } else if (games[i].isReady && !games[i].isEnded && includeOngoing) {
+                    shouldInclude = true;
+                } else if (!games[i].isReady && !games[i].isEnded && includeNotStarted) {
+                    shouldInclude = true;
+                }
+
+                if (shouldInclude) {
+                    governorGames[count] = i;
+                    count++;
+                }
+            }
+        }
+
+        uint256[] memory result = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = governorGames[i];
         }
 
         return result;

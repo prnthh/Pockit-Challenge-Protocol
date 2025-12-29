@@ -1,5 +1,7 @@
 .env
 
+.claude
+
 node_modules
 
 # Logs

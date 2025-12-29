@@ -1,187 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPublicClient, createWalletClient, http, defineChain, parseEther, formatEther, custom } from 'viem'
+import contractABI from './challengeAbi'
 import './App.css'
-
-const contractABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "governor",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "stakeAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxPlayers",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address[]",
-        "name": "whitelist",
-        "type": "address[]"
-      }
-    ],
-    "name": "createGame",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      }
-    ],
-    "name": "joinGame",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      }
-    ],
-    "name": "forfeitGame",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "name": 'getNotStartedGames',
-    "inputs": [
-      { "internalType": 'uint256', "name": 'offset', "type": 'uint256' },
-      { "internalType": 'uint256', "name": 'limit', "type": 'uint256' },
-    ],
-    "outputs": [{ "internalType": 'uint256[]', "name": '', "type": 'uint256[]' }],
-    "stateMutability": 'view',
-    "type": 'function',
-  },
-  {
-    "name": 'getGovernorGames',
-    "inputs": [
-      { "internalType": 'address', "name": 'governor', "type": 'address' },
-      { "internalType": 'bool', "name": 'includeEnded', "type": 'bool' },
-      { "internalType": 'bool', "name": 'includeOngoing', "type": 'bool' },
-      { "internalType": 'bool', "name": 'includeNotStarted', "type": 'bool' },
-      { "internalType": 'uint256', "name": 'offset', "type": 'uint256' },
-      { "internalType": 'uint256', "name": 'limit', "type": 'uint256' },
-    ],
-    "outputs": [{ "internalType": 'uint256[]', "name": '', "type": 'uint256[]' }],
-    "stateMutability": 'view',
-    "type": 'function',
-  },
-
-  {
-    "inputs": [],
-    "name": "getOngoingGames",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getGame",
-    "outputs": [
-      {
-        "components": [
-          { "internalType": "address", "name": "governor", "type": "address" },
-          { "internalType": "uint256", "name": "stakeAmount", "type": "uint256" },
-          { "internalType": "uint256", "name": "maxPlayers", "type": "uint256" },
-          { "internalType": "uint256", "name": "activePlayers", "type": "uint256" },
-          { "internalType": "bool", "name": "isReady", "type": "bool" },
-          { "internalType": "bool", "name": "isEnded", "type": "bool" },
-          { "internalType": "address[]", "name": "players", "type": "address[]" },
-          { "internalType": "address[]", "name": "losers", "type": "address[]" },
-          { "internalType": "address[]", "name": "whitelist", "type": "address[]" },
-          { "internalType": "address[]", "name": "forfeited", "type": "address[]" }
-        ],
-        "internalType": "struct GameEscrow.GameInfo",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      }
-    ],
-    "name": "setGameReady",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "loser",
-        "type": "address"
-      }
-    ],
-    "name": "addLoser",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "gameId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "governorFeePercentage",
-        "type": "uint256"
-      }
-    ],
-    "name": "endGame",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-] as const
 
 // Chain configurations
 const CHAINS = {
@@ -251,6 +71,83 @@ interface Game {
 
 const PAGE_SIZE = 50n
 
+// Shared wallet utilities
+const createWallet = async (customChain: ReturnType<typeof defineChain>) => {
+  if (!window.ethereum) throw new Error('No wallet found')
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+  return createWalletClient({
+    account: accounts[0] as `0x${string}`,
+    chain: customChain,
+    transport: custom(window.ethereum),
+  })
+}
+
+const switchNetwork = async (chainConfig: typeof CHAINS[ChainKey]) => {
+  if (!window.ethereum) return
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: chainConfig.chainId }],
+    })
+  } catch (switchError: any) {
+    if (switchError.code === 4902) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: chainConfig.chainId,
+          chainName: chainConfig.name,
+          nativeCurrency: chainConfig.nativeCurrency,
+          rpcUrls: [chainConfig.rpcUrl],
+          blockExplorerUrls: [chainConfig.blockExplorer],
+        }],
+      })
+    } else {
+      throw switchError
+    }
+  }
+}
+
+const ensureCorrectChain = async (chainConfig: typeof CHAINS[ChainKey]) => {
+  if (!window.ethereum) throw new Error('No wallet found')
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+  if (chainId !== chainConfig.chainId) await switchNetwork(chainConfig)
+}
+
+const writeToContract = async (
+  chainConfig: typeof CHAINS[ChainKey],
+  customChain: ReturnType<typeof defineChain>,
+  functionName: string,
+  args: readonly unknown[],
+  value?: bigint
+) => {
+  await ensureCorrectChain(chainConfig)
+  const wallet = await createWallet(customChain)
+  return wallet.writeContract({
+    address: chainConfig.contractAddress as `0x${string}`,
+    abi: contractABI,
+    functionName: functionName as any,
+    args: args as any,
+    value,
+    chain: null,
+  })
+}
+
+// Game Header Component
+function GameHeader({ gameId, governor, stake, currencySymbol }: {
+  gameId: bigint
+  governor: string
+  stake: bigint
+  currencySymbol: string
+}) {
+  return (
+    <div className="game-header">
+      <div className="game-id">Game #{gameId.toString()}</div>
+      <small>Governor: {governor.slice(0, 6)}...{governor.slice(-4)}</small>
+      <div className="game-stake">Stake: {formatEther(stake)} {currencySymbol}</div>
+    </div>
+  )
+}
+
 // Player Row with Add Loser Button
 function PlayerRow({
   player,
@@ -268,26 +165,14 @@ function PlayerRow({
   const canAddAsLoser = !isLoser && !hasForfeited
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-      <span style={{ color: isLoser ? '#f87171' : (hasForfeited ? '#9ca3af' : 'inherit') }}>
+    <div className="player-row">
+      <span className={isLoser ? 'loser' : (hasForfeited ? 'forfeited' : '')}>
         {player.slice(0, 6)}...{player.slice(-4)}
         {isLoser && ' (Loser)'}
         {hasForfeited && ' (Forfeited)'}
       </span>
       {game.isReady && canAddAsLoser && onAddLoser && (
-        <button
-          onClick={() => onAddLoser(game.id, player)}
-          disabled={!walletAddress}
-          style={{
-            padding: '0.2rem 0.5rem',
-            fontSize: '0.7rem',
-            borderRadius: '4px',
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            color: '#f87171',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => onAddLoser(game.id, player)} disabled={!walletAddress}>
           Add as Loser
         </button>
       )}
@@ -298,35 +183,49 @@ function PlayerRow({
 // Create Game Tile Component
 function CreateGameTile({
   walletAddress,
-  governorPreset,
-  setGovernorPreset,
-  customGovernorAddress,
-  setCustomGovernorAddress,
-  selectedGovernor,
-  amount,
-  setAmount,
-  maxPlayers,
-  setMaxPlayers,
-  whitelistInput,
-  setWhitelistInput,
-  createGame,
   currencySymbol,
+  chainConfig,
+  customChain,
 }: {
   walletAddress: string
-  governorPreset: 'player' | 'coinflip' | 'custom'
-  setGovernorPreset: (preset: 'player' | 'coinflip' | 'custom') => void
-  customGovernorAddress: string
-  setCustomGovernorAddress: (address: string) => void
-  selectedGovernor: string
-  amount: string
-  setAmount: (amount: string) => void
-  maxPlayers: string
-  setMaxPlayers: (maxPlayers: string) => void
-  whitelistInput: string
-  setWhitelistInput: (whitelist: string) => void
-  createGame: () => void
   currencySymbol: string
+  chainConfig: typeof CHAINS[ChainKey]
+  customChain: ReturnType<typeof defineChain>
 }) {
+  const COINFLIP_GOVERNOR = '0xdBec3DC802a817EEE74a7077f734654384857E9d'
+
+  const [governorPreset, setGovernorPreset] = useState<'player' | 'coinflip' | 'custom'>('coinflip')
+  const [customGovernorAddress, setCustomGovernorAddress] = useState<string>('0xdBec3DC802a817EEE74a7077f734654384857E9d')
+  const [amount, setAmount] = useState<string>('')
+  const [maxPlayers, setMaxPlayers] = useState<string>('')
+  const [whitelistInput, setWhitelistInput] = useState<string>('')
+
+  const getGovernorAddress = (): string => {
+    if (governorPreset === 'player') {
+      return walletAddress || ''
+    } else if (governorPreset === 'coinflip') {
+      return COINFLIP_GOVERNOR
+    } else {
+      return customGovernorAddress
+    }
+  }
+
+  const selectedGovernor = getGovernorAddress()
+
+  const createGame = async () => {
+    if (!amount || isNaN(Number(amount)) || parseFloat(amount) <= 0) {
+      alert('Please enter a valid amount.')
+      return
+    }
+    try {
+      const whitelist = whitelistInput.split(',').map(addr => addr.trim()).filter(addr => addr.length > 0).map(addr => addr as `0x${string}`)
+      const maxPlayersValue = maxPlayers && !isNaN(Number(maxPlayers)) && parseFloat(maxPlayers) > 0 ? BigInt(Math.floor(parseFloat(maxPlayers))) : 0n
+      await writeToContract(chainConfig, customChain, 'createGame', [selectedGovernor as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist], parseEther(amount))
+    } catch (error) {
+      console.error('Error creating game:', error)
+      alert('Failed to create game: ' + (error as Error).message)
+    }
+  }
   return (
     <div className="tile">
       <h2>Create a Game</h2>
@@ -359,8 +258,8 @@ function CreateGameTile({
         </div>
       )}
 
-      <div className="form-group" style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: '-0.5rem' }}>
-        Selected Governor: {selectedGovernor ? `${selectedGovernor.slice(0, 6)}...${selectedGovernor.slice(-4)}` : 'None'}
+      <div className="form-group">
+        <small>Selected Governor: {selectedGovernor ? `${selectedGovernor.slice(0, 6)}...${selectedGovernor.slice(-4)}` : 'None'}</small>
       </div>
 
       <div className="form-group">
@@ -385,9 +284,7 @@ function CreateGameTile({
           onChange={(e) => setMaxPlayers(e.target.value)}
           disabled={!walletAddress}
         />
-        <small style={{ opacity: 0.6, marginTop: '0.25rem' }}>
-          Maximum number of players. Leave empty for unlimited.
-        </small>
+        <small>Maximum number of players. Leave empty for unlimited.</small>
       </div>
 
       <div className="form-group">
@@ -400,9 +297,7 @@ function CreateGameTile({
           onChange={(e) => setWhitelistInput(e.target.value)}
           disabled={!walletAddress}
         />
-        <small style={{ opacity: 0.6, marginTop: '0.25rem' }}>
-          Comma-separated addresses for private games. Leave empty for public games.
-        </small>
+        <small>Comma-separated addresses for private games. Leave empty for public games.</small>
       </div>
 
       <button className="primary-button" onClick={createGame} disabled={!walletAddress}>
@@ -416,16 +311,33 @@ function CreateGameTile({
 function JoinGameTile({
   openGames,
   walletAddress,
-  joinGame,
-  forfeitGame,
   currencySymbol,
+  chainConfig,
+  customChain,
 }: {
   openGames: Game[]
   walletAddress: string
-  joinGame: (gameId: bigint, stakeAmount: bigint) => void
-  forfeitGame: (gameId: bigint) => void
   currencySymbol: string
+  chainConfig: typeof CHAINS[ChainKey]
+  customChain: ReturnType<typeof defineChain>
 }) {
+  const joinGame = async (gameId: bigint, stakeAmount: bigint) => {
+    try {
+      await writeToContract(chainConfig, customChain, 'joinGame', [gameId], stakeAmount)
+    } catch (error) {
+      console.error('Error joining game:', error)
+      alert('Failed to join game: ' + (error as Error).message)
+    }
+  }
+
+  const forfeitGame = async (gameId: bigint) => {
+    try {
+      await writeToContract(chainConfig, customChain, 'forfeitGame', [gameId])
+    } catch (error) {
+      console.error('Error forfeiting game:', error)
+      alert('Failed to forfeit game: ' + (error as Error).message)
+    }
+  }
   return (
     <div className="tile">
       <h2>Join a Game</h2>
@@ -440,52 +352,34 @@ function JoinGameTile({
 
             return (
               <div key={game.id.toString()} className="game-card">
-                <div className="game-info">
-                  <div className="game-id">Game #{game.id.toString()}</div>
-                  <div className="game-details">
-                    <div>Governor: {game.governor.slice(0, 6)}...{game.governor.slice(-4)}</div>
-                    <div className="game-stake">Stake: {formatEther(game.stakeAmount)} {currencySymbol}</div>
-                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                      Players: {game.players?.length || 0}
-                      {game.maxPlayers > 0n && ` / ${game.maxPlayers.toString()}`}
-                      {(game.forfeited?.length || 0) > 0 && ` (${game.forfeited.length} forfeited)`}
-                    </div>
-                    {(game.whitelist?.length || 0) > 0 && (
-                      <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: '#fbbf24' }}>
-                        🔒 Private ({game.whitelist.length} whitelisted)
-                      </div>
-                    )}
-                    {isFull && (
-                      <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: '#ef4444' }}>
-                        🚫 Game Full
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {!isPlayerInGame ? (
-                    <button
-                      className="join-button"
-                      onClick={() => joinGame(game.id, game.stakeAmount)}
-                      disabled={!walletAddress || !isWhitelisted || isFull}
-                      title={isFull ? 'Game is full' : (!isWhitelisted ? 'You are not whitelisted for this game' : '')}
-                    >
-                      {isFull ? '🚫 Full' : (isWhitelisted ? 'Join' : '🔒 Not Whitelisted')}
-                    </button>
-                  ) : (
-                    <button
-                      className="ready-button"
-                      onClick={() => forfeitGame(game.id)}
-                      disabled={!walletAddress || !!hasForfeited}
-                      style={{
-                        background: hasForfeited ? 'rgba(100, 100, 100, 0.3)' : 'rgba(239, 68, 68, 0.2)',
-                        borderColor: hasForfeited ? 'rgba(150, 150, 150, 0.4)' : 'rgba(239, 68, 68, 0.4)'
-                      }}
-                    >
-                      {hasForfeited ? 'Forfeited' : 'Forfeit'}
-                    </button>
-                  )}
-                </div>
+                <GameHeader
+                  gameId={game.id}
+                  governor={game.governor}
+                  stake={game.stakeAmount}
+                  currencySymbol={currencySymbol}
+                />
+
+                <small>
+                  Players: {game.players?.length || 0}
+                  {game.maxPlayers > 0n && ` / ${game.maxPlayers.toString()}`}
+                  {(game.forfeited?.length || 0) > 0 && ` (${game.forfeited.length} forfeited)`}
+                </small>
+                {(game.whitelist?.length || 0) > 0 && <small>🔒 Private ({game.whitelist.length} whitelisted)</small>}
+                {isFull && <small>🚫 Game Full</small>}
+
+                {!isPlayerInGame ? (
+                  <button
+                    onClick={() => joinGame(game.id, game.stakeAmount)}
+                    disabled={!walletAddress || !isWhitelisted || isFull}
+                    title={isFull ? 'Game is full' : (!isWhitelisted ? 'You are not whitelisted for this game' : '')}
+                  >
+                    {isFull ? '🚫 Full' : (isWhitelisted ? 'Join' : '🔒 Not Whitelisted')}
+                  </button>
+                ) : (
+                  <button onClick={() => forfeitGame(game.id)} disabled={!walletAddress || !!hasForfeited}>
+                    {hasForfeited ? 'Forfeited' : 'Forfeit'}
+                  </button>
+                )}
               </div>
             )
           })
@@ -501,106 +395,131 @@ function JoinGameTile({
 function GovernGamesTile({
   ongoingGames,
   walletAddress,
-  readyUpGame,
-  addLoser,
-  endGame,
   pollOngoingGames,
   currencySymbol,
+  chainConfig,
+  customChain,
 }: {
   ongoingGames: Game[]
   walletAddress: string
-  readyUpGame: (gameId: bigint) => void
-  addLoser: (gameId: bigint, loser: string) => void
-  endGame: (gameId: bigint) => void
   pollOngoingGames: () => void
   currencySymbol: string
+  chainConfig: typeof CHAINS[ChainKey]
+  customChain: ReturnType<typeof defineChain>
 }) {
+  // Calculate pool split for a game
+  const calculatePoolSplit = (game: Game) => {
+    const totalPool = game.stakeAmount * BigInt(game.players.length)
+    const governorFee = (totalPool * 5n) / 100n
+    const winners = game.players.filter(p => !game.losers.some(l => l.toLowerCase() === p.toLowerCase()) && !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase()))
+    const winnersCount = BigInt(winners.length)
+    const perWinnerAmount = winnersCount > 0n ? (totalPool - governorFee) / winnersCount : 0n
+
+    return {
+      totalPool,
+      governorFee,
+      winnersCount,
+      perWinnerAmount
+    }
+  }
+
+  const readyUpGame = async (gameId: bigint) => {
+    try {
+      await writeToContract(chainConfig, customChain, 'setGameReady', [gameId])
+    } catch (error) {
+      console.error('Error readying up game:', error)
+      alert('Failed to ready up game: ' + (error as Error).message)
+    }
+  }
+
+  const addLoser = async (gameId: bigint, loser: string) => {
+    try {
+      await writeToContract(chainConfig, customChain, 'addLoser', [gameId, loser as `0x${string}`])
+    } catch (error) {
+      console.error('Error adding loser:', error)
+      alert('Failed to add loser: ' + (error as Error).message)
+    }
+  }
+
+  const endGame = async (gameId: bigint) => {
+    try {
+      await writeToContract(chainConfig, customChain, 'endGame', [gameId, 5n])
+    } catch (error) {
+      console.error('Error ending game:', error)
+      alert('Failed to end game: ' + (error as Error).message)
+    }
+  }
+
   return (
     <div className="tile">
       <h2>Govern Games</h2>
 
       <div className="govern-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <p style={{ margin: 0, opacity: 0.8 }}>Manage games where you are the governor (5% fee).</p>
-          <button
-            onClick={pollOngoingGames}
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              cursor: 'pointer',
-            }}
-          >
-            Refresh
-          </button>
+        <div className="section-header">
+          <p className="section-title">Manage games where you are the governor (5% fee).</p>
+          <button onClick={pollOngoingGames}>Refresh</button>
         </div>
 
-        <div className="games-list" style={{ marginTop: '1rem' }}>
+        <div className="games-list">
           {ongoingGames.length > 0 ? (
-            ongoingGames.map((game) => (
-              <div key={game.id.toString()} className="game-card">
-                <div className="game-info">
-                  <div className="game-id">Game #{game.id.toString()}</div>
-                  <div className="game-details">
-                    <div>Governor: {game.governor.slice(0, 6)}...{game.governor.slice(-4)}</div>
-                    <div className="game-stake">Stake: {formatEther(game.stakeAmount)} {currencySymbol}</div>
-                    <div style={{ marginTop: '0.5rem', opacity: 0.7 }}>
-                      Ready: {game.isReady ? '✓' : '✗'}
-                    </div>
+            ongoingGames.map((game) => {
+              const poolSplit = calculatePoolSplit(game)
 
-                    <div style={{ fontSize: '0.75rem', marginTop: '0.75rem' }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Players: {game.players.length}</div>
-                      {game.players.length > 0 ? (
-                        game.players.map((p, i) => (
-                          <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
-                        ))
-                      ) : (
-                        <div style={{ opacity: 0.5 }}>Waiting for players...</div>
-                      )}
-                    </div>
+              return (
+                <div key={game.id.toString()} className="game-card">
+                  <GameHeader
+                    gameId={game.id}
+                    governor={game.governor}
+                    stake={game.stakeAmount}
+                    currencySymbol={currencySymbol}
+                  />
 
-                    {game.losers.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                        <div style={{ fontWeight: 'bold', color: '#f87171' }}>
-                          Current Losers: {game.losers.length}
-                        </div>
-                      </div>
+                  <small>Ready: {game.isReady ? '✓' : '✗'}</small>
+
+                  <div>
+                    <small><strong>Players: {game.players.length}</strong></small>
+                    {game.players.length > 0 ? (
+                      game.players.map((p, i) => (
+                        <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
+                      ))
+                    ) : (
+                      <small>Waiting for players...</small>
                     )}
                   </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+                  {game.losers.length > 0 && (
+                    <small className="loser"><strong>Current Losers: {game.losers.length}</strong></small>
+                  )}
+
+                  {game.isReady && (
+                    <div className="info-box">
+                      <strong>Pool Split:</strong>
+                      <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
+                      <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
+                      <div>Winners: {poolSplit.winnersCount.toString()}</div>
+                      <div><strong>Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</strong></div>
+                    </div>
+                  )}
+
                   {game.players.length >= 1 ? (
                     <>
                       {!game.isReady && (
-                        <button
-                          className="ready-button"
-                          onClick={() => readyUpGame(game.id)}
-                          disabled={!walletAddress}
-                        >
+                        <button onClick={() => readyUpGame(game.id)} disabled={!walletAddress} style={{ width: '100%' }}>
                           Ready {game.players.length === 1 && '(1P)'}
                         </button>
                       )}
                       {game.isReady && (
-                        <button
-                          className="resolve-button"
-                          onClick={() => endGame(game.id)}
-                          disabled={!walletAddress}
-                        >
+                        <button onClick={() => endGame(game.id)} disabled={!walletAddress} style={{ width: '100%' }}>
                           Resolve Game
                         </button>
                       )}
                     </>
                   ) : (
-                    <div style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'center' }}>
-                      Waiting for players
-                    </div>
+                    <small>Waiting for players</small>
                   )}
                 </div>
-              </div>
-            ))
+              )
+            })
           ) : (
             <p className="no-games">No games to govern.</p>
           )}
@@ -625,71 +544,41 @@ function PastGamesTile({
       <h2>Past Games History</h2>
 
       <div className="govern-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <p style={{ margin: 0, opacity: 0.8 }}>View completed games where you were the governor.</p>
-          <button
-            onClick={pollPastGames}
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              cursor: 'pointer',
-            }}
-          >
-            Refresh
-          </button>
+        <div className="section-header">
+          <p className="section-title">View completed games where you were the governor.</p>
+          <button onClick={pollPastGames}>Refresh</button>
         </div>
 
-        <div className="games-list" style={{ marginTop: '1rem' }}>
+        <div className="games-list">
           {pastGames.length > 0 ? (
             pastGames.map((game) => {
               const winners = game.players.filter(p => !game.losers.includes(p))
               return (
-                <div key={game.id.toString()} className="game-card" style={{ background: 'rgba(0, 200, 100, 0.1)' }}>
-                  <div className="game-info">
-                    <div className="game-id">Game #{game.id.toString()}</div>
-                    <div className="game-details">
-                      <div>Players: {game.players.length}</div>
-                      <div className="game-stake">Stake: {formatEther(game.stakeAmount)} {currencySymbol}</div>
+                <div key={game.id.toString()} className="game-card completed-game">
+                  <GameHeader
+                    gameId={game.id}
+                    governor={game.governor}
+                    stake={game.stakeAmount}
+                    currencySymbol={currencySymbol}
+                  />
 
-                      <div style={{ marginTop: '0.75rem' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: '#4ade80' }}>Winners ({winners.length}):</div>
-                        {winners.length > 0 ? (
-                          winners.map((p, i) => (
-                            <div key={i} style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                              {p.slice(0, 6)}...{p.slice(-4)}
-                            </div>
-                          ))
-                        ) : (
-                          <div style={{ fontSize: '0.75rem', marginLeft: '0.5rem', opacity: 0.5 }}>
-                            No winners
-                          </div>
-                        )}
-                      </div>
+                  <small>Players: {game.players.length}</small>
 
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: '#f87171' }}>Losers ({game.losers.length}):</div>
-                        {game.losers.length > 0 ? (
-                          game.losers.map((p, i) => (
-                            <div key={i} style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                              {p.slice(0, 6)}...{p.slice(-4)}
-                            </div>
-                          ))
-                        ) : (
-                          <div style={{ fontSize: '0.75rem', marginLeft: '0.5rem', opacity: 0.5 }}>
-                            No losers
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ marginTop: '0.5rem', opacity: 0.7, fontSize: '0.75rem' }}>
-                        Status: Completed ✓
-                      </div>
-                    </div>
+                  <div>
+                    <small><strong>Winners ({winners.length}):</strong></small>
+                    {winners.length > 0 ? winners.map((p, i) => (
+                      <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
+                    )) : <small>No winners</small>}
                   </div>
+
+                  <div>
+                    <small className="loser"><strong>Losers ({game.losers.length}):</strong></small>
+                    {game.losers.length > 0 ? game.losers.map((p, i) => (
+                      <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
+                    )) : <small>No losers</small>}
+                  </div>
+
+                  <small>Status: Completed ✓</small>
                 </div>
               )
             })
@@ -706,33 +595,13 @@ function App() {
   const [selectedChain, setSelectedChain] = useState<ChainKey>('sanko')
   const [walletAddress, setWalletAddress] = useState<string>('')
   const [balance, setBalance] = useState<string>('')
-  const [governorPreset, setGovernorPreset] = useState<'player' | 'coinflip' | 'custom'>('coinflip')
-  const [customGovernorAddress, setCustomGovernorAddress] = useState<string>('0xdBec3DC802a817EEE74a7077f734654384857E9d')
-  const [amount, setAmount] = useState<string>('')
-  const [maxPlayers, setMaxPlayers] = useState<string>('')
-  const [whitelistInput, setWhitelistInput] = useState<string>('')
   const [openGames, setOpenGames] = useState<Game[]>([])
   const [ongoingGames, setOngoingGames] = useState<Game[]>([])
   const [pastGames, setPastGames] = useState<Game[]>([])
-
-  // Coinflip governor address (you can update this with actual deployed governor)
-  const COINFLIP_GOVERNOR = '0xdBec3DC802a817EEE74a7077f734654384857E9d'
+  const lastProcessedBlockRef = useRef<bigint | null>(null)
 
   // Get current chain configuration
   const CHAIN_CONFIG = CHAINS[selectedChain]
-
-  // Compute the actual governor address based on preset
-  const getGovernorAddress = (): string => {
-    if (governorPreset === 'player') {
-      return walletAddress || ''
-    } else if (governorPreset === 'coinflip') {
-      return COINFLIP_GOVERNOR
-    } else {
-      return customGovernorAddress
-    }
-  }
-
-  const selectedGovernor = getGovernorAddress()
 
   // Create chain and client based on selected chain
   const customChain = defineChain({
@@ -753,45 +622,8 @@ function App() {
   })
 
   const updateBalance = async (address: string) => {
-    const bal = await client.getBalance({
-      address: address as `0x${string}`,
-    })
+    const bal = await client.getBalance({ address: address as `0x${string}` })
     setBalance(`${formatEther(bal)} ${CHAIN_CONFIG.nativeCurrency.symbol}`)
-  }
-
-  const switchToChain = async () => {
-    if (!window.ethereum) return
-
-    try {
-      // Try to switch to the network
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: CHAIN_CONFIG.chainId }],
-      })
-    } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: CHAIN_CONFIG.chainId,
-                chainName: CHAIN_CONFIG.name,
-                nativeCurrency: CHAIN_CONFIG.nativeCurrency,
-                rpcUrls: [CHAIN_CONFIG.rpcUrl],
-                blockExplorerUrls: [CHAIN_CONFIG.blockExplorer],
-              },
-            ],
-          })
-        } catch (addError) {
-          console.error('Failed to add network:', addError)
-          throw addError
-        }
-      } else {
-        throw switchError
-      }
-    }
   }
 
   const connectWallet = async () => {
@@ -799,13 +631,8 @@ function App() {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
         const address = accounts[0]
-
-        // Check current chain
         const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-        if (chainId !== CHAIN_CONFIG.chainId) {
-          await switchToChain()
-        }
-
+        if (chainId !== CHAIN_CONFIG.chainId) await switchNetwork(CHAIN_CONFIG)
         setWalletAddress(address)
         await updateBalance(address)
         await pollOpenGames()
@@ -819,338 +646,48 @@ function App() {
     }
   }
 
-  const createGame = async () => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    if (!amount || isNaN(Number(amount)) || parseFloat(amount) <= 0) {
-      alert('Please enter a valid amount.')
-      return
-    }
-
+  const fetchGames = async (functionName: string, args: readonly unknown[]): Promise<Game[]> => {
     try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      await updateBalance(accounts[0])
-
-      // Parse whitelist input (comma-separated addresses)
-      const whitelist: `0x${string}`[] = whitelistInput
-        .split(',')
-        .map(addr => addr.trim())
-        .filter(addr => addr.length > 0)
-        .map(addr => addr as `0x${string}`)
-
-      // Parse maxPlayers (0 means unlimited)
-      const maxPlayersValue = maxPlayers && !isNaN(Number(maxPlayers)) && parseFloat(maxPlayers) > 0
-        ? BigInt(Math.floor(parseFloat(maxPlayers)))
-        : 0n
-
-      const hash = await walletClient.writeContract({
+      const ids = await client.readContract({
         address: CHAIN_CONFIG.contractAddress as `0x${string}`,
         abi: contractABI,
-        functionName: 'createGame',
-        args: [selectedGovernor as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist],
-        value: parseEther(amount),
+        functionName: functionName as any,
+        args: args as any,
       })
-
-      console.log('Transaction hash:', hash)
-      setTimeout(pollOpenGames, 2000)
-    } catch (error) {
-      console.error('Error creating game:', error)
-      alert('Failed to create game: ' + (error as Error).message)
-    }
-  }
-
-  const joinGame = async (gameId: bigint, stakeAmount: bigint) => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
+      const games: Game[] = []
+      for (const gameId of ids) {
+        const gameInfo = await client.readContract({
+          address: CHAIN_CONFIG.contractAddress as `0x${string}`,
+          abi: contractABI,
+          functionName: 'getGame',
+          args: [gameId],
+        }) as GameInfo
+        games.push({ id: gameId, ...gameInfo })
       }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      const hash = await walletClient.writeContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'joinGame',
-        args: [gameId],
-        value: stakeAmount,
-      })
-
-      console.log('Transaction hash:', hash)
-      setTimeout(pollOpenGames, 2000)
-    } catch (error) {
-      console.error('Error joining game:', error)
-      alert('Failed to join game: ' + (error as Error).message)
-    }
-  }
-
-  const forfeitGame = async (gameId: bigint) => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      const hash = await walletClient.writeContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'forfeitGame',
-        args: [gameId],
-      })
-
-      console.log('Forfeit transaction hash:', hash)
-      setTimeout(pollOpenGames, 2000)
-    } catch (error) {
-      console.error('Error forfeiting game:', error)
-      alert('Failed to forfeit game: ' + (error as Error).message)
+      return games
+    } catch (err) {
+      console.error(`Error fetching games (${functionName}):`, err)
+      return []
     }
   }
 
   const pollOpenGames = async () => {
-    try {
-      const ids = await client.readContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'getNotStartedGames',
-        args: [0n, PAGE_SIZE],
-      })
-
-      const games: Game[] = []
-      for (const gameId of ids) {
-        const gameInfo = await client.readContract({
-          address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-          abi: contractABI,
-          functionName: 'getGame',
-          args: [gameId],
-        }) as GameInfo
-
-        games.push({ id: gameId, ...gameInfo })
-      }
-
-      setOpenGames(games)
-    } catch (err) {
-      console.error('Error polling open games:', err)
-    }
+    const games = await fetchGames('getNotStartedGames', [0n, PAGE_SIZE])
+    setOpenGames(games)
   }
-
 
   const pollOngoingGames = async () => {
     if (!walletAddress) return
-
-    try {
-      const ids = await client.readContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'getGovernorGames',
-        args: [
-          walletAddress as `0x${string}`,
-          false, // includeEnded
-          true,  // includeOngoing
-          true,  // includeNotStarted
-          0n,
-          PAGE_SIZE,
-        ],
-      })
-
-      const games: Game[] = []
-      for (const gameId of ids) {
-        const gameInfo = await client.readContract({
-          address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-          abi: contractABI,
-          functionName: 'getGame',
-          args: [gameId],
-        }) as GameInfo
-
-        games.push({ id: gameId, ...gameInfo })
-      }
-
-      setOngoingGames(games)
-    } catch (err) {
-      console.error('Error polling ongoing games:', err)
-    }
+    const games = await fetchGames('getGovernorGames', [walletAddress as `0x${string}`, false, true, true, 0n, PAGE_SIZE])
+    setOngoingGames(games)
   }
 
   const pollPastGames = async () => {
     if (!walletAddress) return
-
-    try {
-      const ids = await client.readContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'getGovernorGames',
-        args: [
-          walletAddress as `0x${string}`,
-          true,  // includeEnded
-          false, // includeOngoing
-          false, // includeNotStarted
-          0n,
-          PAGE_SIZE,
-        ],
-      })
-
-      const games: Game[] = []
-      for (const gameId of ids) {
-        const gameInfo = await client.readContract({
-          address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-          abi: contractABI,
-          functionName: 'getGame',
-          args: [gameId],
-        }) as GameInfo
-
-        games.push({ id: gameId, ...gameInfo })
-      }
-
-      setPastGames(games)
-    } catch (err) {
-      console.error('Error polling past games:', err)
-    }
+    const games = await fetchGames('getGovernorGames', [walletAddress as `0x${string}`, true, false, false, 0n, PAGE_SIZE])
+    setPastGames(games)
   }
 
-  const readyUpGame = async (gameId: bigint) => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      const hash = await walletClient.writeContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'setGameReady',
-        args: [gameId],
-      })
-      console.log('Ready up transaction hash:', hash)
-      setTimeout(pollOngoingGames, 2000)
-    } catch (error) {
-      console.error('Error readying up game:', error)
-      alert('Failed to ready up game: ' + (error as Error).message)
-    }
-  }
-
-  const addLoser = async (gameId: bigint, loser: string) => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      const hash = await walletClient.writeContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'addLoser',
-        args: [gameId, loser as `0x${string}`],
-      })
-      console.log('Add loser transaction hash:', hash)
-      setTimeout(pollOngoingGames, 2000)
-    } catch (error) {
-      console.error('Error adding loser:', error)
-      alert('Failed to add loser: ' + (error as Error).message)
-    }
-  }
-
-  const endGame = async (gameId: bigint) => {
-    if (!window.ethereum) {
-      alert('Please connect your wallet first.')
-      return
-    }
-
-    try {
-      // Check and switch chain if needed
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== CHAIN_CONFIG.chainId) {
-        await switchToChain()
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const walletClient = createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-      })
-
-      // End the game with 5% fee
-      const hash = await walletClient.writeContract({
-        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: 'endGame',
-        args: [gameId, 5n],
-      })
-      console.log('End game transaction hash:', hash)
-
-      setTimeout(() => {
-        pollOngoingGames()
-        pollPastGames()
-      }, 2000)
-    } catch (error) {
-      console.error('Error ending game:', error)
-      alert('Failed to end game: ' + (error as Error).message)
-    }
-  }
 
   useEffect(() => {
     const checkWallet = async () => {
@@ -1167,6 +704,53 @@ function App() {
     }
     checkWallet()
   }, [])
+
+  // Listen for contract events to auto-refresh
+  useEffect(() => {
+    if (!client) return
+
+    // Watch for new blocks and check for events
+    const unwatch = client.watchBlocks({
+      onBlock: async (block) => {
+        const blockNumber = block.number
+
+        // Skip if we've already processed this block
+        if (lastProcessedBlockRef.current && blockNumber <= lastProcessedBlockRef.current) {
+          return
+        }
+
+        // Get events from the last processed block to current
+        const fromBlock = lastProcessedBlockRef.current ? lastProcessedBlockRef.current + 1n : blockNumber
+
+        try {
+          const logs = await client.getContractEvents({
+            address: CHAIN_CONFIG.contractAddress as `0x${string}`,
+            abi: contractABI,
+            fromBlock,
+            toBlock: blockNumber,
+          })
+
+          // If there are new events, refresh the games
+          if (logs.length > 0) {
+            console.log(`Contract events detected in blocks ${fromBlock}-${blockNumber}:`, logs)
+            await pollOpenGames()
+            if (walletAddress) {
+              await pollOngoingGames()
+              await pollPastGames()
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching contract events:', err)
+        }
+
+        lastProcessedBlockRef.current = blockNumber
+      }
+    })
+
+    return () => {
+      unwatch()
+    }
+  }, [client, walletAddress, CHAIN_CONFIG.contractAddress])
 
   useEffect(() => {
     if (walletAddress) {
@@ -1192,15 +776,13 @@ function App() {
 
   // Reload data and switch wallet when chain changes
   useEffect(() => {
-    const handleChainChange = async () => {
-      if (walletAddress) {
-        await switchToChain()
-        await pollOpenGames()
-        await pollOngoingGames()
-        await pollPastGames()
-      }
+    if (walletAddress) {
+      switchNetwork(CHAIN_CONFIG).then(() => {
+        pollOpenGames()
+        pollOngoingGames()
+        pollPastGames()
+      })
     }
-    handleChainChange()
   }, [selectedChain])
 
   return (
@@ -1213,10 +795,10 @@ function App() {
             value={selectedChain}
             onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
             style={{
-              padding: '8px 12px',
-              fontSize: '14px',
-              borderRadius: '8px',
-              border: '2px solid #646cff',
+              padding: '4px 8px',
+              fontSize: '12px',
+              borderRadius: '0',
+              border: '1px solid #646cff',
               backgroundColor: '#1a1a1a',
               color: 'white',
               cursor: 'pointer'
@@ -1253,37 +835,26 @@ function App() {
       <div className="tiles-container">
         <CreateGameTile
           walletAddress={walletAddress}
-          governorPreset={governorPreset}
-          setGovernorPreset={setGovernorPreset}
-          customGovernorAddress={customGovernorAddress}
-          setCustomGovernorAddress={setCustomGovernorAddress}
-          selectedGovernor={selectedGovernor}
-          amount={amount}
-          setAmount={setAmount}
-          maxPlayers={maxPlayers}
-          setMaxPlayers={setMaxPlayers}
-          whitelistInput={whitelistInput}
-          setWhitelistInput={setWhitelistInput}
-          createGame={createGame}
           currencySymbol={CHAIN_CONFIG.nativeCurrency.symbol}
+          chainConfig={CHAIN_CONFIG}
+          customChain={customChain}
         />
 
         <JoinGameTile
           openGames={openGames}
           walletAddress={walletAddress}
-          joinGame={joinGame}
-          forfeitGame={forfeitGame}
           currencySymbol={CHAIN_CONFIG.nativeCurrency.symbol}
+          chainConfig={CHAIN_CONFIG}
+          customChain={customChain}
         />
 
         <GovernGamesTile
           ongoingGames={ongoingGames}
           walletAddress={walletAddress}
-          readyUpGame={readyUpGame}
-          addLoser={addLoser}
-          endGame={endGame}
           pollOngoingGames={pollOngoingGames}
           currencySymbol={CHAIN_CONFIG.nativeCurrency.symbol}
+          chainConfig={CHAIN_CONFIG}
+          customChain={customChain}
         />
 
         <PastGamesTile

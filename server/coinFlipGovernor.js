@@ -1,42 +1,42 @@
 // server/coinFlipGovernor.js
-import Governor from "../index.js";
+import Governor from "@pockit/challenge-protocol";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const coinGovernor = new Governor(
-  process.env.governorPrivateKey,
-  process.env.matchmakingContractAddress,
-  2,
-  async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
-    let game = await contract.getGame(gameId);
-    let players = game.players;
+const coinGovernor = new Governor({
+  privateKey: process.env.governorPrivateKey,
+  matchMakingContractAddress: process.env.matchmakingContractAddress,
+  fee: 2,
+  gameHandler: async (gameId, _wallet, contract, onGameHandled, onGameResolved) => {
+    // Get current game state
+    const game = await contract.getGame(gameId);
+    const players = game.players;
 
-    // Check conditions to start the game
-    if (players.length >= 2) return;
-    onGameHandled();
-
-    if (!players.includes(wallet.address)) {
-      console.log("Joining game as governor...");
-      const joinTx = await contract.joinGame(gameId, { value: game.stakeAmount });
-      await joinTx.wait();
-      console.log("Governor joined the game");
+    // Wait until we have at least 2 players
+    if (players.length < 2) {
+      console.log(`[Game ${gameId}] Waiting for more players (${players.length}/2)`);
+      return;
     }
 
-    game = await contract.getGame(gameId);
-    players = game.players;
+    console.log(`[Game ${gameId}] Starting with ${players.length} players`);
 
-    console.log("Setting game ready...");
-    const readyTx = await contract.setGameReady(gameId);
-    await readyTx.wait();
-    console.log("Game is ready");
+    // Mark game as ready
+    await onGameHandled();
 
-    const result = Math.random() < 0.5;
-    console.log("Flipping coin...", result);
-    const loser = result ? players[0] : players[1];
-    console.log(`Loser is: ${loser}`);
+    // Simple coin flip: random winner
+    const loserIndex = Math.random() < 0.5 ? 0 : 1;
+    const loser = players[loserIndex];
+    const winner = players[1 - loserIndex];
 
-    onGameResolved(loser);
-  }
-);
+    console.log(`[Game ${gameId}] Coin flip result - Winner: ${winner.slice(0, 6)}..., Loser: ${loser.slice(0, 6)}...`);
 
+    // Resolve the game with the loser
+    // Note: Contract automatically handles forfeited players
+    await onGameResolved([loser]);
+  },
+  providerUrl: process.env.PROVIDER_URL || "https://mainnet.sanko.xyz",
+});
+
+// Start polling for new games (default: latest 100 games)
 coinGovernor.pollForNewGames().catch(console.error);

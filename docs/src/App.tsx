@@ -648,12 +648,12 @@ function App() {
 
   const fetchGames = async (functionName: string, args: readonly unknown[]): Promise<Game[]> => {
     try {
-      const ids = await client.readContract({
+      const ids = (await client.readContract({
         address: CHAIN_CONFIG.contractAddress as `0x${string}`,
         abi: contractABI,
         functionName: functionName as any,
         args: args as any,
-      })
+      })) as readonly bigint[]
       const games: Game[] = []
       for (const gameId of ids) {
         const gameInfo = await client.readContract({
@@ -672,8 +672,21 @@ function App() {
   }
 
   const pollOpenGames = async () => {
-    const games = await fetchGames('getNotStartedGames', [0n, PAGE_SIZE])
-    setOpenGames(games)
+    try {
+      // Get the latest games by querying from the most recent
+      const nextGameId = (await client.readContract({
+        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
+        abi: contractABI,
+        functionName: 'nextGameId' as any,
+        args: [],
+      })) as unknown as bigint
+      const startGame = nextGameId > PAGE_SIZE ? nextGameId - PAGE_SIZE : 0n
+      const games = await fetchGames('getNotStartedGames', [startGame, PAGE_SIZE])
+      setOpenGames(games)
+    } catch (err) {
+      console.error('Error polling open games:', err)
+      setOpenGames([])
+    }
   }
 
   const pollOngoingGames = async () => {

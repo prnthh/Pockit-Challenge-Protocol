@@ -66,9 +66,9 @@ class Governor {
         }
     }
 
-    async pollForNewGames(pollingIntervalMs = 5000, startGame = 0, endGame = 100) {
+    async pollForNewGames(pollingIntervalMs = 5000, options = {}) {
         console.log(`[PCP] Governor Address: ${this.wallet.address}`);
-        
+
         while (true) {
             try {
                 const nowBalance = await this.provider.getBalance(this.wallet.address);
@@ -76,18 +76,32 @@ class Governor {
                     this.balance = nowBalance;
                     console.log(`[PCP] Balance: ${ethers.formatEther(this.balance)}`);
                 }
-                
+
                 if (!this.matchMakingContractAddress) {
                     throw new Error("MatchMaking contract address is not defined");
                 }
-                
+
                 const contract = new ethers.Contract(
                     this.matchMakingContractAddress,
                     this.contractABI,
                     this.wallet
                 );
 
-                const gameIds = await contract.getNotStartedGames(startGame, endGame);
+                let startGame, limit;
+
+                // If specific range is provided, use it. Otherwise, get latest games.
+                if (options.startGame !== undefined && options.endGame !== undefined) {
+                    startGame = BigInt(options.startGame);
+                    limit = BigInt(options.endGame);
+                } else {
+                    // Get the latest games by querying from the most recent
+                    const pageSize = options.pageSize || 100;
+                    const nextGameId = await contract.nextGameId();
+                    startGame = nextGameId > pageSize ? nextGameId - BigInt(pageSize) : 0n;
+                    limit = BigInt(pageSize);
+                }
+
+                const gameIds = await contract.getNotStartedGames(startGame, limit);
 
                 for (const gameId of gameIds) {
                     const game = await contract.getGame(gameId);

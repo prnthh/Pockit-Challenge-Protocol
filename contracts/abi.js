@@ -3,61 +3,12 @@ const abi = [
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "gameId",
+				"name": "_houseFeePercentage",
 				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "loser",
-				"type": "address"
 			}
 		],
-		"name": "addLoser",
-		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "governor",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "stakeAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "createGame",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "governorFeePercentage",
-				"type": "uint256"
-			}
-		],
-		"name": "endGame",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
+		"type": "constructor"
 	},
 	{
 		"anonymous": false,
@@ -111,30 +62,6 @@ const abi = [
 		"type": "event"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "joinGame",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_houseFeePercentage",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -169,6 +96,25 @@ const abi = [
 				"type": "address"
 			}
 		],
+		"name": "PlayerForfeited",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			}
+		],
 		"name": "PlayerJoined",
 		"type": "event"
 	},
@@ -178,16 +124,79 @@ const abi = [
 				"internalType": "uint256",
 				"name": "gameId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "loser",
+				"type": "address"
 			}
 		],
-		"name": "setGameReady",
+		"name": "addLoser",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "withdraw",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "governor",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "stakeAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maxPlayers",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address[]",
+				"name": "whitelist",
+				"type": "address[]"
+			}
+		],
+		"name": "createGame",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "governorFeePercentage",
+				"type": "uint256"
+			}
+		],
+		"name": "endGame",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "forfeitGame",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -208,11 +217,6 @@ const abi = [
 				"type": "address"
 			},
 			{
-				"internalType": "uint256",
-				"name": "stakeAmount",
-				"type": "uint256"
-			},
-			{
 				"internalType": "bool",
 				"name": "isReady",
 				"type": "bool"
@@ -221,6 +225,21 @@ const abi = [
 				"internalType": "bool",
 				"name": "isEnded",
 				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "stakeAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maxPlayers",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "activePlayers",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -249,6 +268,16 @@ const abi = [
 						"type": "uint256"
 					},
 					{
+						"internalType": "uint256",
+						"name": "maxPlayers",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "activePlayers",
+						"type": "uint256"
+					},
+					{
 						"internalType": "bool",
 						"name": "isReady",
 						"type": "bool"
@@ -267,6 +296,16 @@ const abi = [
 						"internalType": "address[]",
 						"name": "losers",
 						"type": "address[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "whitelist",
+						"type": "address[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "forfeited",
+						"type": "address[]"
 					}
 				],
 				"internalType": "struct GameEscrow.GameInfo",
@@ -278,7 +317,62 @@ const abi = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "governor",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "includeEnded",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "includeOngoing",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "includeNotStarted",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "offset",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "limit",
+				"type": "uint256"
+			}
+		],
+		"name": "getGovernorGames",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "offset",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "limit",
+				"type": "uint256"
+			}
+		],
 		"name": "getNotStartedGames",
 		"outputs": [
 			{
@@ -291,7 +385,18 @@ const abi = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "offset",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "limit",
+				"type": "uint256"
+			}
+		],
 		"name": "getOngoingGames",
 		"outputs": [
 			{
@@ -314,6 +419,19 @@ const abi = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "joinGame",
+		"outputs": [],
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
@@ -340,6 +458,26 @@ const abi = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "setGameReady",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

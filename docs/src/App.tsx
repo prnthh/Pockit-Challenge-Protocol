@@ -64,18 +64,30 @@ const contractABI = [
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getNotStartedGames",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
+    "name": 'getNotStartedGames',
+    "inputs": [
+      { "internalType": 'uint256', "name": 'offset', "type": 'uint256' },
+      { "internalType": 'uint256', "name": 'limit', "type": 'uint256' },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    "outputs": [{ "internalType": 'uint256[]', "name": '', "type": 'uint256[]' }],
+    "stateMutability": 'view',
+    "type": 'function',
   },
+  {
+    "name": 'getGovernorGames',
+    "inputs": [
+      { "internalType": 'address', "name": 'governor', "type": 'address' },
+      { "internalType": 'bool', "name": 'includeEnded', "type": 'bool' },
+      { "internalType": 'bool', "name": 'includeOngoing', "type": 'bool' },
+      { "internalType": 'bool', "name": 'includeNotStarted', "type": 'bool' },
+      { "internalType": 'uint256', "name": 'offset', "type": 'uint256' },
+      { "internalType": 'uint256', "name": 'limit', "type": 'uint256' },
+    ],
+    "outputs": [{ "internalType": 'uint256[]', "name": '', "type": 'uint256[]' }],
+    "stateMutability": 'view',
+    "type": 'function',
+  },
+
   {
     "inputs": [],
     "name": "getOngoingGames",
@@ -101,51 +113,16 @@ const contractABI = [
     "outputs": [
       {
         "components": [
-          {
-            "internalType": "address",
-            "name": "governor",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "stakeAmount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxPlayers",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isReady",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "isEnded",
-            "type": "bool"
-          },
-          {
-            "internalType": "address[]",
-            "name": "players",
-            "type": "address[]"
-          },
-          {
-            "internalType": "address[]",
-            "name": "losers",
-            "type": "address[]"
-          },
-          {
-            "internalType": "address[]",
-            "name": "whitelist",
-            "type": "address[]"
-          },
-          {
-            "internalType": "address[]",
-            "name": "forfeited",
-            "type": "address[]"
-          }
+          { "internalType": "address", "name": "governor", "type": "address" },
+          { "internalType": "uint256", "name": "stakeAmount", "type": "uint256" },
+          { "internalType": "uint256", "name": "maxPlayers", "type": "uint256" },
+          { "internalType": "uint256", "name": "activePlayers", "type": "uint256" },
+          { "internalType": "bool", "name": "isReady", "type": "bool" },
+          { "internalType": "bool", "name": "isEnded", "type": "bool" },
+          { "internalType": "address[]", "name": "players", "type": "address[]" },
+          { "internalType": "address[]", "name": "losers", "type": "address[]" },
+          { "internalType": "address[]", "name": "whitelist", "type": "address[]" },
+          { "internalType": "address[]", "name": "forfeited", "type": "address[]" }
         ],
         "internalType": "struct GameEscrow.GameInfo",
         "name": "",
@@ -203,40 +180,6 @@ const contractABI = [
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "governor",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "includeEnded",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "includeOngoing",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "includeNotStarted",
-        "type": "bool"
-      }
-    ],
-    "name": "getGovernorGames",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   }
 ] as const
 
@@ -255,7 +198,7 @@ const CHAINS = {
     rpcUrl: 'https://sanko-arb-sepolia.rpc.caldera.xyz/http',
     blockExplorer: 'https://sanko-arb-sepolia.hub.caldera.xyz/',
     faucetUrl: 'https://sanko-arb-sepolia.hub.caldera.xyz/',
-    contractAddress: '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF',
+    contractAddress: '0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8',
   },
   sepolia: {
     id: 11155111,
@@ -280,12 +223,17 @@ interface GameInfo {
   governor: string
   stakeAmount: bigint
   maxPlayers: bigint
+  activePlayers: bigint
   isReady: boolean
   isEnded: boolean
   players: string[]
   losers: string[]
   whitelist: string[]
   forfeited: string[]
+}
+
+interface Game extends GameInfo {
+  id: bigint
 }
 
 interface Game {
@@ -299,6 +247,52 @@ interface Game {
   losers: string[]
   whitelist: string[]
   forfeited: string[]
+}
+
+const PAGE_SIZE = 50n
+
+// Player Row with Add Loser Button
+function PlayerRow({
+  player,
+  game,
+  walletAddress,
+  onAddLoser
+}: {
+  player: string;
+  game: Game;
+  walletAddress: string;
+  onAddLoser?: (gameId: bigint, loser: string) => void
+}) {
+  const isLoser = game.losers.some(l => l.toLowerCase() === player.toLowerCase())
+  const hasForfeited = game.forfeited.some(f => f.toLowerCase() === player.toLowerCase())
+  const canAddAsLoser = !isLoser && !hasForfeited
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+      <span style={{ color: isLoser ? '#f87171' : (hasForfeited ? '#9ca3af' : 'inherit') }}>
+        {player.slice(0, 6)}...{player.slice(-4)}
+        {isLoser && ' (Loser)'}
+        {hasForfeited && ' (Forfeited)'}
+      </span>
+      {game.isReady && canAddAsLoser && onAddLoser && (
+        <button
+          onClick={() => onAddLoser(game.id, player)}
+          disabled={!walletAddress}
+          style={{
+            padding: '0.2rem 0.5rem',
+            fontSize: '0.7rem',
+            borderRadius: '4px',
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#f87171',
+            cursor: 'pointer',
+          }}
+        >
+          Add as Loser
+        </button>
+      )}
+    </div>
+  )
 }
 
 // Create Game Tile Component
@@ -461,7 +455,7 @@ function JoinGameTile({
                         🔒 Private ({game.whitelist.length} whitelisted)
                       </div>
                     )}
-                    {game.maxPlayers > 0n && game.players?.length >= Number(game.maxPlayers) && (
+                    {isFull && (
                       <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: '#ef4444' }}>
                         🚫 Game Full
                       </div>
@@ -507,19 +501,17 @@ function JoinGameTile({
 function GovernGamesTile({
   ongoingGames,
   walletAddress,
-  resolveCode,
-  setResolveCode,
   readyUpGame,
-  resolveGame,
+  addLoser,
+  endGame,
   pollOngoingGames,
   currencySymbol,
 }: {
   ongoingGames: Game[]
   walletAddress: string
-  resolveCode: string
-  setResolveCode: (code: string) => void
   readyUpGame: (gameId: bigint) => void
-  resolveGame: (gameId: bigint, players: string[]) => void
+  addLoser: (gameId: bigint, loser: string) => void
+  endGame: (gameId: bigint) => void
   pollOngoingGames: () => void
   currencySymbol: string
 }) {
@@ -546,22 +538,6 @@ function GovernGamesTile({
           </button>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="resolve-code">Resolution Logic (JavaScript):</label>
-          <textarea
-            id="resolve-code"
-            className="code-input"
-            value={resolveCode}
-            onChange={(e) => setResolveCode(e.target.value)}
-            placeholder="// Return array of loser addresses"
-            rows={6}
-            disabled={!walletAddress}
-          />
-          <small style={{ opacity: 0.6, marginTop: '0.25rem' }}>
-            Available: players (array of addresses)
-          </small>
-        </div>
-
         <div className="games-list" style={{ marginTop: '1rem' }}>
           {ongoingGames.length > 0 ? (
             ongoingGames.map((game) => (
@@ -569,24 +545,34 @@ function GovernGamesTile({
                 <div className="game-info">
                   <div className="game-id">Game #{game.id.toString()}</div>
                   <div className="game-details">
-                    <div>Players: {game.players.length}</div>
+                    <div>Governor: {game.governor.slice(0, 6)}...{game.governor.slice(-4)}</div>
                     <div className="game-stake">Stake: {formatEther(game.stakeAmount)} {currencySymbol}</div>
-                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    <div style={{ marginTop: '0.5rem', opacity: 0.7 }}>
+                      Ready: {game.isReady ? '✓' : '✗'}
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', marginTop: '0.75rem' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Players: {game.players.length}</div>
                       {game.players.length > 0 ? (
                         game.players.map((p, i) => (
-                          <div key={i}>{p.slice(0, 6)}...{p.slice(-4)}</div>
+                          <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
                         ))
                       ) : (
                         <div style={{ opacity: 0.5 }}>Waiting for players...</div>
                       )}
                     </div>
-                    <div style={{ marginTop: '0.5rem', opacity: 0.7 }}>
-                      Ready: {game.isReady ? '✓' : '✗'}
-                    </div>
+
+                    {game.losers.length > 0 && (
+                      <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                        <div style={{ fontWeight: 'bold', color: '#f87171' }}>
+                          Current Losers: {game.losers.length}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {game.players.length === 1 ? (
+                  {game.players.length >= 1 ? (
                     <>
                       {!game.isReady && (
                         <button
@@ -594,37 +580,16 @@ function GovernGamesTile({
                           onClick={() => readyUpGame(game.id)}
                           disabled={!walletAddress}
                         >
-                          Ready (1P)
+                          Ready {game.players.length === 1 && '(1P)'}
                         </button>
                       )}
                       {game.isReady && (
                         <button
                           className="resolve-button"
-                          onClick={() => resolveGame(game.id, game.players)}
+                          onClick={() => endGame(game.id)}
                           disabled={!walletAddress}
                         >
-                          Resolve (1P)
-                        </button>
-                      )}
-                    </>
-                  ) : game.players.length >= 2 ? (
-                    <>
-                      {!game.isReady && (
-                        <button
-                          className="ready-button"
-                          onClick={() => readyUpGame(game.id)}
-                          disabled={!walletAddress}
-                        >
-                          Ready
-                        </button>
-                      )}
-                      {game.isReady && (
-                        <button
-                          className="resolve-button"
-                          onClick={() => resolveGame(game.id, game.players)}
-                          disabled={!walletAddress}
-                        >
-                          Resolve
+                          Resolve Game
                         </button>
                       )}
                     </>
@@ -749,7 +714,6 @@ function App() {
   const [openGames, setOpenGames] = useState<Game[]>([])
   const [ongoingGames, setOngoingGames] = useState<Game[]>([])
   const [pastGames, setPastGames] = useState<Game[]>([])
-  const [resolveCode, setResolveCode] = useState<string>('// Return array of loser addresses\n// e.g., [players[0]]\nreturn [players[0]]')
 
   // Coinflip governor address (you can update this with actual deployed governor)
   const COINFLIP_GOVERNOR = '0xdBec3DC802a817EEE74a7077f734654384857E9d'
@@ -983,48 +947,52 @@ function App() {
 
   const pollOpenGames = async () => {
     try {
-      const notStartedGames = await client.readContract({
+      const ids = await client.readContract({
         address: CHAIN_CONFIG.contractAddress as `0x${string}`,
         abi: contractABI,
         functionName: 'getNotStartedGames',
+        args: [0n, PAGE_SIZE],
       })
 
       const games: Game[] = []
-      for (const gameId of notStartedGames) {
+      for (const gameId of ids) {
         const gameInfo = await client.readContract({
           address: CHAIN_CONFIG.contractAddress as `0x${string}`,
           abi: contractABI,
           functionName: 'getGame',
           args: [gameId],
         }) as GameInfo
-        games.push({
-          id: gameId,
-          ...gameInfo
-        })
+
+        games.push({ id: gameId, ...gameInfo })
       }
 
       setOpenGames(games)
-    } catch (error) {
-      console.error('Error polling games:', error)
+    } catch (err) {
+      console.error('Error polling open games:', err)
     }
   }
+
 
   const pollOngoingGames = async () => {
     if (!walletAddress) return
 
     try {
-      // Use the new efficient contract function to get all governor games (ongoing and not started)
-      const governorGameIds = await client.readContract({
+      const ids = await client.readContract({
         address: CHAIN_CONFIG.contractAddress as `0x${string}`,
         abi: contractABI,
         functionName: 'getGovernorGames',
-        args: [walletAddress as `0x${string}`, false, true, true], // includeEnded=false, includeOngoing=true, includeNotStarted=true
+        args: [
+          walletAddress as `0x${string}`,
+          false, // includeEnded
+          true,  // includeOngoing
+          true,  // includeNotStarted
+          0n,
+          PAGE_SIZE,
+        ],
       })
 
       const games: Game[] = []
-
-      // Fetch info for each game
-      for (const gameId of governorGameIds) {
+      for (const gameId of ids) {
         const gameInfo = await client.readContract({
           address: CHAIN_CONFIG.contractAddress as `0x${string}`,
           abi: contractABI,
@@ -1032,15 +1000,12 @@ function App() {
           args: [gameId],
         }) as GameInfo
 
-        games.push({
-          id: gameId,
-          ...gameInfo
-        })
+        games.push({ id: gameId, ...gameInfo })
       }
 
       setOngoingGames(games)
-    } catch (error) {
-      console.error('Error polling ongoing games:', error)
+    } catch (err) {
+      console.error('Error polling ongoing games:', err)
     }
   }
 
@@ -1048,18 +1013,22 @@ function App() {
     if (!walletAddress) return
 
     try {
-      // Use the new efficient contract function to get all ended governor games
-      const governorGameIds = await client.readContract({
+      const ids = await client.readContract({
         address: CHAIN_CONFIG.contractAddress as `0x${string}`,
         abi: contractABI,
         functionName: 'getGovernorGames',
-        args: [walletAddress as `0x${string}`, true, false, false], // includeEnded=true, includeOngoing=false, includeNotStarted=false
+        args: [
+          walletAddress as `0x${string}`,
+          true,  // includeEnded
+          false, // includeOngoing
+          false, // includeNotStarted
+          0n,
+          PAGE_SIZE,
+        ],
       })
 
       const games: Game[] = []
-
-      // Fetch info for each game
-      for (const gameId of governorGameIds) {
+      for (const gameId of ids) {
         const gameInfo = await client.readContract({
           address: CHAIN_CONFIG.contractAddress as `0x${string}`,
           abi: contractABI,
@@ -1067,15 +1036,12 @@ function App() {
           args: [gameId],
         }) as GameInfo
 
-        games.push({
-          id: gameId,
-          ...gameInfo
-        })
+        games.push({ id: gameId, ...gameInfo })
       }
 
       setPastGames(games)
-    } catch (error) {
-      console.error('Error polling past games:', error)
+    } catch (err) {
+      console.error('Error polling past games:', err)
     }
   }
 
@@ -1113,7 +1079,7 @@ function App() {
     }
   }
 
-  const resolveGame = async (gameId: bigint, players: string[]) => {
+  const addLoser = async (gameId: bigint, loser: string) => {
     if (!window.ethereum) {
       alert('Please connect your wallet first.')
       return
@@ -1126,12 +1092,38 @@ function App() {
         await switchToChain()
       }
 
-      // Evaluate the user's code to determine losers
-      const evaluateCode = new Function('players', resolveCode)
-      const losers = evaluateCode(players) as string[]
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+      const walletClient = createWalletClient({
+        account: accounts[0] as `0x${string}`,
+        chain: customChain,
+        transport: custom(window.ethereum),
+      })
 
-      if (!Array.isArray(losers)) {
-        throw new Error('Code must return an array of addresses')
+      const hash = await walletClient.writeContract({
+        address: CHAIN_CONFIG.contractAddress as `0x${string}`,
+        abi: contractABI,
+        functionName: 'addLoser',
+        args: [gameId, loser as `0x${string}`],
+      })
+      console.log('Add loser transaction hash:', hash)
+      setTimeout(pollOngoingGames, 2000)
+    } catch (error) {
+      console.error('Error adding loser:', error)
+      alert('Failed to add loser: ' + (error as Error).message)
+    }
+  }
+
+  const endGame = async (gameId: bigint) => {
+    if (!window.ethereum) {
+      alert('Please connect your wallet first.')
+      return
+    }
+
+    try {
+      // Check and switch chain if needed
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+      if (chainId !== CHAIN_CONFIG.chainId) {
+        await switchToChain()
       }
 
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
@@ -1140,18 +1132,6 @@ function App() {
         chain: customChain,
         transport: custom(window.ethereum),
       })
-
-      // Add each loser
-      for (const loser of losers) {
-        const hash = await walletClient.writeContract({
-          address: CHAIN_CONFIG.contractAddress as `0x${string}`,
-          abi: contractABI,
-          functionName: 'addLoser',
-          args: [gameId, loser as `0x${string}`],
-        })
-        console.log('Add loser transaction hash:', hash)
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
 
       // End the game with 5% fee
       const hash = await walletClient.writeContract({
@@ -1164,11 +1144,11 @@ function App() {
 
       setTimeout(() => {
         pollOngoingGames()
-        pollOpenGames()
+        pollPastGames()
       }, 2000)
     } catch (error) {
-      console.error('Error resolving game:', error)
-      alert('Failed to resolve game: ' + (error as Error).message)
+      console.error('Error ending game:', error)
+      alert('Failed to end game: ' + (error as Error).message)
     }
   }
 
@@ -1299,10 +1279,9 @@ function App() {
         <GovernGamesTile
           ongoingGames={ongoingGames}
           walletAddress={walletAddress}
-          resolveCode={resolveCode}
-          setResolveCode={setResolveCode}
           readyUpGame={readyUpGame}
-          resolveGame={resolveGame}
+          addLoser={addLoser}
+          endGame={endGame}
           pollOngoingGames={pollOngoingGames}
           currencySymbol={CHAIN_CONFIG.nativeCurrency.symbol}
         />

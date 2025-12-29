@@ -87,7 +87,7 @@ class Governor {
                     this.wallet
                 );
                 
-                const gameIds = await contract.getNotStartedGames();
+                const gameIds = await contract.getNotStartedGames(0, 100);
                 
                 for (const gameId of gameIds) {
                     const game = await contract.getGame(gameId);

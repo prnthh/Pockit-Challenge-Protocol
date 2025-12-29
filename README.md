@@ -293,7 +293,7 @@ These contracts are live and can be used by anyone. The house fee is 2% for all 
 | Network | Address | Block Explorer |
 |---------|---------|----------------|
 | Sanko Mainnet | `0xb8f26231ab263ed6c85f2a602a383d597936164b` | [View](https://explorer.sanko.xyz/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
-| Sanko Testnet | `0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF` | [View](https://sanko-arb-sepolia.hub.caldera.xyz/address/0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF) |
+| Sanko Testnet | `0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8` | [View](https://sanko-arb-sepolia.hub.caldera.xyz/address/0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8) |
 | Ethereum Mainnet | `0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87` | [View](https://etherscan.io/address/0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87) |
 
 **Note:** Games using the global matchmaking contracts are featured on the [global leaderboard](https://pockit.gg).

@@ -4,7 +4,8 @@
   "description": "A protocol for matchmaking and game governance on EVM based blockchains.",
   "main": "src/index.js",
   "scripts": {
-    "prepublishOnly": "npm pack",
+    "build": "npm pack",
+    "prepublishOnly": "npm run build",
     "coinflip": "node server/coinFlipGovernor.js",
     "dev": "npm run dev --prefix docs",
     "test": "echo \"Error: no test specified\" && exit 1"

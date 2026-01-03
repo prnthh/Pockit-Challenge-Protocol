@@ -194,23 +194,25 @@ function CreateGameTile({
 }) {
   const COINFLIP_GOVERNOR = '0xdBec3DC802a817EEE74a7077f734654384857E9d'
 
-  const [governorPreset, setGovernorPreset] = useState<'player' | 'coinflip' | 'custom'>('coinflip')
-  const [customGovernorAddress, setCustomGovernorAddress] = useState<string>('0xdBec3DC802a817EEE74a7077f734654384857E9d')
+  const [governorAddress, setGovernorAddress] = useState<string>(walletAddress || '')
   const [amount, setAmount] = useState<string>('')
   const [maxPlayers, setMaxPlayers] = useState<string>('')
   const [whitelistInput, setWhitelistInput] = useState<string>('')
 
-  const getGovernorAddress = (): string => {
-    if (governorPreset === 'player') {
-      return walletAddress || ''
-    } else if (governorPreset === 'coinflip') {
-      return COINFLIP_GOVERNOR
-    } else {
-      return customGovernorAddress
+  // Update governor address when wallet address changes
+  useEffect(() => {
+    if (walletAddress && !governorAddress) {
+      setGovernorAddress(walletAddress)
+    }
+  }, [walletAddress])
+
+  const handlePrefillSelect = (value: string) => {
+    if (value === 'player') {
+      setGovernorAddress(walletAddress || '')
+    } else if (value === 'coinflip') {
+      setGovernorAddress(COINFLIP_GOVERNOR)
     }
   }
-
-  const selectedGovernor = getGovernorAddress()
 
   const createGame = async () => {
     if (!amount || isNaN(Number(amount)) || parseFloat(amount) <= 0) {
@@ -220,7 +222,7 @@ function CreateGameTile({
     try {
       const whitelist = whitelistInput.split(',').map(addr => addr.trim()).filter(addr => addr.length > 0).map(addr => addr as `0x${string}`)
       const maxPlayersValue = maxPlayers && !isNaN(Number(maxPlayers)) && parseFloat(maxPlayers) > 0 ? BigInt(Math.floor(parseFloat(maxPlayers))) : 0n
-      await writeToContract(chainConfig, customChain, 'createGame', [selectedGovernor as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist], parseEther(amount))
+      await writeToContract(chainConfig, customChain, 'createGame', [governorAddress as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist], parseEther(amount))
     } catch (error) {
       console.error('Error creating game:', error)
       alert('Failed to create game: ' + (error as Error).message)
@@ -231,47 +233,63 @@ function CreateGameTile({
       <h2>Create a Game</h2>
 
       <div className="form-group">
-        <label htmlFor="governor-preset">Governor Preset:</label>
-        <select
-          id="governor-preset"
-          value={governorPreset}
-          onChange={(e) => setGovernorPreset(e.target.value as 'player' | 'coinflip' | 'custom')}
+        <label htmlFor="governor-input">Governor Address:</label>
+        <input
+          type="text"
+          id="governor-input"
+          placeholder="0x..."
+          value={governorAddress}
+          onChange={(e) => setGovernorAddress(e.target.value)}
           disabled={!walletAddress}
-        >
-          <option value="coinflip">Coinflip Governor</option>
-          <option value="player">Player (Me)</option>
-          <option value="custom">Custom Address</option>
-        </select>
-      </div>
-
-      {governorPreset === 'custom' && (
-        <div className="form-group">
-          <label htmlFor="custom-governor-input">Custom Governor Address:</label>
-          <input
-            type="text"
-            id="custom-governor-input"
-            placeholder="0x..."
-            value={customGovernorAddress}
-            onChange={(e) => setCustomGovernorAddress(e.target.value)}
+        />
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <button
+            onClick={() => handlePrefillSelect('player')}
             disabled={!walletAddress}
-          />
+            style={{ flex: 1 }}
+          >
+            My Address
+          </button>
+          <button
+            onClick={() => handlePrefillSelect('coinflip')}
+            disabled={!walletAddress}
+            style={{ flex: 1 }}
+          >
+            Coinflip Governor
+          </button>
         </div>
-      )}
-
-      <div className="form-group">
-        <small>Selected Governor: {selectedGovernor ? `${selectedGovernor.slice(0, 6)}...${selectedGovernor.slice(-4)}` : 'None'}</small>
       </div>
 
       <div className="form-group">
         <label htmlFor="amount-input">Amount ({currencySymbol}):</label>
-        <input
-          type="text"
-          id="amount-input"
-          placeholder="Enter amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          disabled={!walletAddress}
-        />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            type="text"
+            id="amount-input"
+            placeholder="Enter amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={!walletAddress}
+          />
+          <button
+            onClick={() => setAmount((prev) => {
+              const current = parseFloat(prev) || 0;
+              return (current + 0.1).toFixed(1);
+            })}
+            disabled={!walletAddress}
+          >
+            +0.1
+          </button>
+          <button
+            onClick={() => setAmount((prev) => {
+              const current = parseFloat(prev) || 0;
+              return (current + 1).toString();
+            })}
+            disabled={!walletAddress}
+          >
+            +1
+          </button>
+        </div>
       </div>
 
       <div className="form-group">
@@ -452,78 +470,76 @@ function GovernGamesTile({
 
   return (
     <div className="tile">
-      <h2>Govern Games</h2>
+      <div className="section-header">
+        <h2>Govern Games</h2>
+        <button onClick={pollOngoingGames}>Refresh</button>
+      </div>
 
-      <div className="govern-section">
-        <div className="section-header">
-          <p className="section-title">Manage games where you are the governor (5% fee).</p>
-          <button onClick={pollOngoingGames}>Refresh</button>
-        </div>
+      <p className="section-title">Manage games where you are the governor (5% fee).</p>
 
-        <div className="games-list">
-          {ongoingGames.length > 0 ? (
-            ongoingGames.map((game) => {
-              const poolSplit = calculatePoolSplit(game)
+      <div className="games-list">
+        {ongoingGames.length > 0 ? (
+          ongoingGames.map((game) => {
+            const poolSplit = calculatePoolSplit(game)
 
-              return (
-                <div key={game.id.toString()} className="game-card">
-                  <GameHeader
-                    gameId={game.id}
-                    governor={game.governor}
-                    stake={game.stakeAmount}
-                    currencySymbol={currencySymbol}
-                  />
+            return (
+              <div key={game.id.toString()} className="game-card">
+                <GameHeader
+                  gameId={game.id}
+                  governor={game.governor}
+                  stake={game.stakeAmount}
+                  currencySymbol={currencySymbol}
+                />
 
-                  <small>Ready: {game.isReady ? '✓' : '✗'}</small>
+                <small>Ready: {game.isReady ? '✓' : '✗'}</small>
 
-                  <div>
-                    <small><strong>Players: {game.players.length}</strong></small>
-                    {game.players.length > 0 ? (
-                      game.players.map((p, i) => (
-                        <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
-                      ))
-                    ) : (
-                      <small>Waiting for players...</small>
-                    )}
-                  </div>
-
-                  {game.losers.length > 0 && (
-                    <small className="loser"><strong>Current Losers: {game.losers.length}</strong></small>
-                  )}
-
-                  {game.isReady && (
-                    <div className="info-box">
-                      <strong>Pool Split:</strong>
-                      <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
-                      <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
-                      <div>Winners: {poolSplit.winnersCount.toString()}</div>
-                      <div><strong>Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</strong></div>
-                    </div>
-                  )}
-
-                  {game.players.length >= 1 ? (
-                    <>
-                      {!game.isReady && (
-                        <button onClick={() => readyUpGame(game.id)} disabled={!walletAddress} style={{ width: '100%' }}>
-                          Ready {game.players.length === 1 && '(1P)'}
-                        </button>
-                      )}
-                      {game.isReady && (
-                        <button onClick={() => endGame(game.id)} disabled={!walletAddress} style={{ width: '100%' }}>
-                          Resolve Game
-                        </button>
-                      )}
-                    </>
+                <div>
+                  <small><strong>Players: {game.players.length}</strong></small>
+                  {game.players.length > 0 ? (
+                    game.players.map((p, i) => (
+                      <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
+                    ))
                   ) : (
-                    <small>Waiting for players</small>
+                    <small>Waiting for players...</small>
                   )}
                 </div>
-              )
-            })
-          ) : (
-            <p className="no-games">No games to govern.</p>
-          )}
-        </div>
+
+                {game.losers.length > 0 && (
+                  <small className="loser"><strong>Current Losers: {game.losers.length}</strong></small>
+                )}
+
+                {game.isReady && (
+                  <div className="info-box">
+                    <strong>Pool Split:</strong>
+                    <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
+                    <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
+                    <div>Winners: {poolSplit.winnersCount.toString()}</div>
+                    <div><strong>Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</strong></div>
+                  </div>
+                )}
+
+                {game.players.length >= 1 ? (
+                  <>
+                    {!game.isReady && (
+                      <button onClick={() => readyUpGame(game.id)} disabled={!walletAddress}>
+                        Ready {game.players.length === 1 && '(1P)'}
+                      </button>
+                    )}
+                    {game.isReady && (
+                      <button onClick={() => endGame(game.id)} disabled={!walletAddress}>
+                        Resolve Game
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <small>Waiting for players</small>
+                )}
+              </div>
+            )
+          })
+        ) : (
+          <p className="no-games">No games to govern.</p>
+        )}
       </div>
     </div>
   )
@@ -541,51 +557,49 @@ function PastGamesTile({
 }) {
   return (
     <div className="tile">
-      <h2>Past Games History</h2>
+      <div className="section-header">
+        <h2>Past Games History</h2>
+        <button onClick={pollPastGames}>Refresh</button>
+      </div>
 
-      <div className="govern-section">
-        <div className="section-header">
-          <p className="section-title">View completed games where you were the governor.</p>
-          <button onClick={pollPastGames}>Refresh</button>
-        </div>
+      <p className="section-title">View completed games where you were the governor.</p>
 
-        <div className="games-list">
-          {pastGames.length > 0 ? (
-            pastGames.map((game) => {
-              const winners = game.players.filter(p => !game.losers.includes(p))
-              return (
-                <div key={game.id.toString()} className="game-card completed-game">
-                  <GameHeader
-                    gameId={game.id}
-                    governor={game.governor}
-                    stake={game.stakeAmount}
-                    currencySymbol={currencySymbol}
-                  />
+      <div className="games-list">
+        {pastGames.length > 0 ? (
+          pastGames.map((game) => {
+            const winners = game.players.filter(p => !game.losers.includes(p))
+            return (
+              <div key={game.id.toString()} className="game-card">
+                <GameHeader
+                  gameId={game.id}
+                  governor={game.governor}
+                  stake={game.stakeAmount}
+                  currencySymbol={currencySymbol}
+                />
 
-                  <small>Players: {game.players.length}</small>
+                <small>Players: {game.players.length}</small>
 
-                  <div>
-                    <small><strong>Winners ({winners.length}):</strong></small>
-                    {winners.length > 0 ? winners.map((p, i) => (
-                      <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
-                    )) : <small>No winners</small>}
-                  </div>
-
-                  <div>
-                    <small className="loser"><strong>Losers ({game.losers.length}):</strong></small>
-                    {game.losers.length > 0 ? game.losers.map((p, i) => (
-                      <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
-                    )) : <small>No losers</small>}
-                  </div>
-
-                  <small>Status: Completed ✓</small>
+                <div>
+                  <small><strong>Winners ({winners.length}):</strong></small>
+                  {winners.length > 0 ? winners.map((p, i) => (
+                    <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
+                  )) : <small>No winners</small>}
                 </div>
-              )
-            })
-          ) : (
-            <p className="no-games">No past games found.</p>
-          )}
-        </div>
+
+                <div>
+                  <small className="loser"><strong>Losers ({game.losers.length}):</strong></small>
+                  {game.losers.length > 0 ? game.losers.map((p, i) => (
+                    <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
+                  )) : <small>No losers</small>}
+                </div>
+
+                <small>Status: Completed ✓</small>
+              </div>
+            )
+          })
+        ) : (
+          <p className="no-games">No past games found.</p>
+        )}
       </div>
     </div>
   )
@@ -801,21 +815,13 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Match Making Service</h1>
+        <h1>Pockit Challenge Protocol</h1>
 
-        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 50 }}>
           <select
             value={selectedChain}
             onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
-            style={{
-              padding: '4px 8px',
-              fontSize: '12px',
-              borderRadius: '0',
-              border: '1px solid #646cff',
-              backgroundColor: '#1a1a1a',
-              color: 'white',
-              cursor: 'pointer'
-            }}
+            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', border: '1px solid #3b82f6', background: '#1a1a1a', color: 'white', cursor: 'pointer' }}
           >
             <option value="sanko">Sanko Testnet</option>
             <option value="sepolia">Sepolia Testnet</option>
@@ -823,25 +829,40 @@ function App() {
         </div>
 
         <div className="wallet-info">
-          <button className="connect-button" onClick={connectWallet}>
-            {walletAddress ? 'Wallet Connected' : 'Connect Wallet'}
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <a href="https://github.com/prnthh/Pockit-Challenge-Protocol/" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>
 
-          {walletAddress && (
-            <p className="wallet-address">Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>
-          )}
+            <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer">
+              Get {CHAIN_CONFIG.nativeCurrency.symbol}
+            </a>
 
-          <div
-            className="balance"
-            onClick={() => walletAddress && updateBalance(walletAddress)}
-            style={{ cursor: walletAddress ? 'pointer' : 'default' }}
-          >
-            {balance}
+            <a
+              href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open in Remix
+            </a>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button className="connect-button" onClick={connectWallet}>
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}
+            </button>
+
+            <div
+              className="balance"
+              onClick={() => walletAddress && updateBalance(walletAddress)}
+              style={{ cursor: walletAddress ? 'pointer' : 'default' }}
+            >
+              {balance}
+            </div>
           </div>
 
-          <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer">
-            Get {CHAIN_CONFIG.nativeCurrency.symbol}
-          </a>
+
+
+
         </div>
       </header>
 
@@ -876,16 +897,6 @@ function App() {
           currencySymbol={CHAIN_CONFIG.nativeCurrency.symbol}
         />
       </div>
-
-      {/* Open in Remix button */}
-      <a
-        href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="remix-button"
-      >
-        Open in Remix
-      </a>
     </div>
   )
 }

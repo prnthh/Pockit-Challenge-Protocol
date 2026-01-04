@@ -68,43 +68,47 @@ npm install @pockit/challenge-protocol
 ### For Game Developers (Using the Governor Library)
 
 ```javascript
-const Governor = require('@pockit/challenge-protocol');
+import Governor from '@pockit/challenge-protocol';
 
 const gov = new Governor({
   privateKey: 'your-governor-private-key',
   matchMakingContractAddress: '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF', // Sanko testnet
   fee: 5, // 5% governor fee
-  gameHandler: async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
-    // Fetch game details
-    const game = await contract.getGame(gameId);
-    const players = game.players;
+  providerUrl: 'https://sanko-arb-sepolia.rpc.caldera.xyz/http', // Sanko testnet
 
-    // Wait for minimum players
-    if (players.length < 2) {
-      return;
+  // Event handler: Called when a player joins
+  onPlayerJoined: async (gameId, game, { player }) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
+
+    console.log(`Player ${player} joined game ${gameId}`);
+
+    // Start game when we have enough players
+    if (activePlayers.length >= 2 && !game.isReady) {
+      await gov.setGameReady(gameId);
     }
+  },
 
-    // Mark game as ready to start
-    await onGameHandled();
+  // Game loop: Runs your game logic automatically when game is ready
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
 
-    // Your game logic here (e.g., run a coin flip, rock-paper-scissors, etc.)
-    console.log(`Running game ${gameId} with ${players.length} players...`);
+    console.log(`Running game ${gameId} with ${activePlayers.length} players...`);
 
-    // Simulate game - determine losers
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    const loserIndex = Math.floor(Math.random() * players.length);
-    const losers = [players[loserIndex]];
-
-    console.log(`Game ${gameId} complete. Winners: ${players.filter((_, i) => i !== loserIndex).join(', ')}`);
+    // Your game logic here (e.g., coin flip, rock-paper-scissors, etc.)
+    const loserIndex = Math.floor(Math.random() * activePlayers.length);
+    const loser = activePlayers[loserIndex];
 
     // Resolve game and distribute prizes
-    await onGameResolved(losers);
+    await onGameResolved([loser]);
   },
-  providerUrl: 'https://sanko-arb-sepolia.rpc.caldera.xyz/http' // Sanko testnet
 });
 
-// Start polling for new games where you're the governor
-gov.pollForNewGames();
+// Start monitoring for events - automatically recovers unresolved games on startup
+gov.start();
 ```
 
 ### For Players (Direct Contract Interaction)
@@ -302,58 +306,162 @@ These contracts are live and can be used by anyone. The house fee is 2% for all 
 
 ### `Governor(options)`
 
-Creates a new Governor instance for automated game management.
+Creates a new Governor instance for automated game management with event-driven architecture.
 
 #### Options
 
 - **`privateKey`** *(string, required)*: Ethereum private key for signing transactions
 - **`matchMakingContractAddress`** *(string, required)*: Deployed contract address
 - **`fee`** *(number, required)*: Governor fee percentage (0-100)
-- **`gameHandler`** *(async function, required)*: Callback invoked for each game
-  - **Parameters:**
-    - `gameId` *(BigNumber)*: The game ID
-    - `wallet` *(Wallet)*: Ethers wallet instance
-    - `contract` *(Contract)*: Contract instance
-    - `onGameHandled` *(async function)*: Call to mark game as ready
-    - `onGameResolved` *(async function)*: Call with array of loser addresses
 - **`providerUrl`** *(string, optional)*: RPC endpoint (default: `https://mainnet.sanko.xyz`)
 - **`contractABI`** *(array, optional)*: Custom ABI (default: bundled ABI)
 
+#### Event Handlers (all optional)
+
+Lightweight notification callbacks for contract events:
+
+- **`onGameCreated(gameId, game, { creator, stakeAmount })`**: Game created notification
+- **`onPlayerJoined(gameId, game, { player })`**: Player joined notification
+- **`onPlayerForfeited(gameId, game, { player })`**: Player forfeited notification
+- **`onGameReady(gameId, game)`**: Game ready notification (called before gameLoop)
+- **`onLoserAdded(gameId, game, { loser })`**: Loser added notification
+- **`onGameEnded(gameId, game)`**: Game ended notification
+
+#### Game Loop Handler
+
+- **`gameLoop(gameId, game, onGameResolved)`**: Heavyweight game execution logic
+  - Only called for games where you're the governor
+  - Automatically invoked when `GameReady` event fires
+  - Provides `onGameResolved(losers)` callback for easy game resolution
+  - Runs in background (non-blocking)
+  - Automatically recovers on server restart
+
+**Example:**
+```javascript
+gameLoop: async (gameId, game, onGameResolved) => {
+  // Run your game logic here
+  const loser = determineWinner(game.players);
+
+  // Resolve when done
+  await onGameResolved([loser]);
+}
+```
+
 #### Methods
 
-- **`pollForNewGames()`**: Start polling for games where you're the governor
-- **`stop()`**: Stop polling
+- **`start(pollingIntervalMs = 10000)`**: Start event monitoring and automatic game recovery
+- **`createGame(stakeAmount, maxPlayers?, whitelist?)`**: Create a new game
+- **`joinGame(gameId, stakeAmount)`**: Join an existing game
+- **`setGameReady(gameId)`**: Mark game as ready (triggers GameReady event)
+- **`addLoser(gameId, loser)`**: Mark a player as loser
+- **`endGame(gameId, governorFee?)`**: End game and distribute prizes
+- **`resolveGame(gameId, losers)`**: Helper: calls addLoser + endGame
+- **`getGame(gameId)`**: Get full game details
+- **`getGovernorGames(...)`**: Query games by governor
+- **`getNotStartedGames(...)`**: Get games waiting to start
+- **`getBalance()`**: Get governor wallet balance
+- **`formatEther(value)`**: Format wei to ether
+- **`parseEther(value)`**: Parse ether to wei
+
+#### Architecture
+
+The Governor uses **event scanning** instead of polling:
+- ✅ No block persistence needed - contract state is source of truth
+- ✅ Automatic recovery on startup via `recoverUnresolvedGames()`
+- ✅ Idempotent event processing using on-chain state checks
+- ✅ Non-blocking game loops run in background
+
+See [API.md](./API.md) for complete reference and [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed lifecycle information.
 
 ## Use Cases
 
 ### 1. Simple Coinflip Game
 ```javascript
-gameHandler: async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
-  const game = await contract.getGame(gameId);
-  if (game.players.length !== 2) return;
+const governor = new Governor({
+  privateKey: process.env.PRIVATE_KEY,
+  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
+  fee: 2,
 
-  await onGameHandled();
+  onPlayerJoined: async (gameId, game) => {
+    // Start when we have 2 players
+    if (game.players.length === 2 && !game.isReady) {
+      await governor.setGameReady(gameId);
+    }
+  },
 
-  // Random coinflip
-  const loser = game.players[Math.random() < 0.5 ? 0 : 1];
-  await onGameResolved([loser]);
-}
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
+
+    // Random coinflip
+    const loser = activePlayers[Math.random() < 0.5 ? 0 : 1];
+    await onGameResolved([loser]);
+  }
+});
+
+governor.start();
 ```
 
-### 2. Tournament (Last Person Standing)
+### 2. Auto-Join Coinflip
 ```javascript
-gameHandler: async (gameId, wallet, contract, onGameHandled, onGameResolved) => {
-  const game = await contract.getGame(gameId);
-  if (game.players.length < 8) return; // Wait for 8 players
+const governor = new Governor({
+  privateKey: process.env.PRIVATE_KEY,
+  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
+  fee: 2,
 
-  await onGameHandled();
+  // Auto-join games created by others
+  onGameCreated: async (gameId, game, { creator, stakeAmount }) => {
+    if (creator.toLowerCase() !== governor.wallet.address.toLowerCase()) {
+      await governor.joinGame(gameId, stakeAmount);
+    }
+  },
 
-  // Mark all but one player as losers
-  const winnerIndex = Math.floor(Math.random() * game.players.length);
-  const losers = game.players.filter((_, i) => i !== winnerIndex);
+  // Start when 2 players
+  onPlayerJoined: async (gameId, game) => {
+    if (game.players.length === 2 && !game.isReady) {
+      await governor.setGameReady(gameId);
+    }
+  },
 
-  await onGameResolved(losers);
-}
+  // Run coinflip
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const loser = game.players[Math.random() < 0.5 ? 0 : 1];
+    await onGameResolved([loser]);
+  }
+});
+
+governor.start();
+```
+
+### 3. Tournament (Last Person Standing)
+```javascript
+const governor = new Governor({
+  privateKey: process.env.PRIVATE_KEY,
+  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
+  fee: 2,
+
+  onPlayerJoined: async (gameId, game) => {
+    // Wait for 8 players
+    if (game.players.length >= 8 && !game.isReady) {
+      await governor.setGameReady(gameId);
+    }
+  },
+
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
+
+    // Mark all but one player as losers
+    const winnerIndex = Math.floor(Math.random() * activePlayers.length);
+    const losers = activePlayers.filter((_, i) => i !== winnerIndex);
+
+    await onGameResolved(losers);
+  }
+});
+
+governor.start();
 ```
 
 ### 3. Private Game with Whitelist and Max Players

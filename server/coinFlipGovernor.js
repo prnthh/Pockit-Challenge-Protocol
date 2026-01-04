@@ -8,35 +8,51 @@ const coinGovernor = new Governor({
   privateKey: process.env.governorPrivateKey,
   matchMakingContractAddress: process.env.matchmakingContractAddress,
   fee: 2,
-  gameHandler: async (gameId, _wallet, contract, onGameHandled, onGameResolved) => {
-    // Get current game state
-    const game = await contract.getGame(gameId);
-    const players = game.players;
+  providerUrl: process.env.PROVIDER_URL || "https://mainnet.sanko.xyz",
 
-    // Wait until we have at least 2 players
-    if (players.length < 2) {
-      console.log(`[Game ${gameId}] Waiting for more players (${players.length}/2)`);
+  // Event handler: When a player creates a game, governor auto-joins as opponent
+  onGameCreated: async (gameId, game, { creator, stakeAmount }) => {
+    console.log(`[Game ${gameId}] Created by ${creator} with stake ${coinGovernor.formatEther(stakeAmount)}`);
+
+    // Don't join our own games
+    if (creator.toLowerCase() === coinGovernor.wallet.address.toLowerCase()) {
       return;
     }
 
-    console.log(`[Game ${gameId}] Starting with ${players.length} players`);
+    console.log(`[Game ${gameId}] Auto-joining as opponent...`);
+    await coinGovernor.joinGame(gameId, stakeAmount);
+  },
 
-    // Mark game as ready
-    await onGameHandled();
+  // Event handler: Start game when we have 2 players (creator + governor)
+  onPlayerJoined: async (gameId, game, { player }) => {
+    console.log(`[Game ${gameId}] Player ${player.slice(0, 6)}... joined (${game.players.length} total players)`);
 
-    // Simple coin flip: random winner
+    // Start when we have 2 players
+    if (game.players.length === 2 && !game.isReady) {
+      console.log(`[Game ${gameId}] Starting coin flip`);
+      await coinGovernor.setGameReady(gameId);
+    }
+  },
+
+  // Game loop: Runs the coin flip and resolves
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
+
+    console.log(`[Game ${gameId}] Running coin flip with ${activePlayers.length} players...`);
+
+    // Coin flip: 50/50 chance
     const loserIndex = Math.random() < 0.5 ? 0 : 1;
-    const loser = players[loserIndex];
-    const winner = players[1 - loserIndex];
+    const loser = activePlayers[loserIndex];
+    const winner = activePlayers[1 - loserIndex];
 
-    console.log(`[Game ${gameId}] Coin flip result - Winner: ${winner.slice(0, 6)}..., Loser: ${loser.slice(0, 6)}...`);
+    console.log(`[Game ${gameId}] Result - Winner: ${winner.slice(0, 6)}..., Loser: ${loser.slice(0, 6)}...`);
 
-    // Resolve the game with the loser
-    // Note: Contract automatically handles forfeited players
+    // Resolve the game (calls addLoser + endGame)
     await onGameResolved([loser]);
   },
-  providerUrl: process.env.PROVIDER_URL || "https://mainnet.sanko.xyz",
 });
 
-// Start polling for new games (default: latest 100 games)
-coinGovernor.pollForNewGames().catch(console.error);
+// Start monitoring for events - automatically recovers unresolved games on startup
+coinGovernor.start();

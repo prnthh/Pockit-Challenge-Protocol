@@ -1,41 +1,50 @@
-// server/twoPlayerCoinflipGovernor.js (user-adapted)
+// server/twoPlayerCoinflipGovernor.js
 import Governor from '@pockit/challenge-protocol';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const twoPlayerCoinGovernor = new Governor({
-  privateKey: 'your-governor-private-key',
-  matchMakingContractAddress: '0xYourContractAddress',
+  privateKey: process.env.governorPrivateKey,
+  matchMakingContractAddress: process.env.matchmakingContractAddress,
   fee: 2,
-  gameHandler: async (gameId, _wallet, contract, onGameHandled, onGameResolved) => {
-    // Get current game state
-    const game = await contract.getGame(gameId);
-    const players = game.players;
 
-    // Wait until we have exactly 2 players
-    if (players.length < 2) {
-      console.log(`[Game ${gameId}] Waiting for 2 players (${players.length}/2)`);
-      return;
+  // Event handler: Called when a player joins
+  onPlayerJoined: async (gameId, game, { player }) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
+
+    console.log(`[Game ${gameId}] Player ${player.slice(0, 6)}... joined (${activePlayers.length} active players)`);
+
+    // Auto-start game when we have exactly 2 players
+    if (activePlayers.length === 2 && !game.isReady) {
+      console.log(`[Game ${gameId}] Starting 2-player coin flip`);
+      await twoPlayerCoinGovernor.setGameReady(gameId);
     }
+  },
 
-    console.log(`[Game ${gameId}] Starting 2-player coin flip`);
+  // Game loop: Automatically called when GameReady fires for your games
+  gameLoop: async (gameId, game, onGameResolved) => {
+    const activePlayers = game.players.filter(
+      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
+    );
 
-    // Mark game as ready/handled
-    await onGameHandled();
+    console.log(`[Game ${gameId}] Running 2-player coin flip...`);
 
     // Simple coin flip: random winner between the 2 players
     const loserIndex = Math.random() < 0.5 ? 0 : 1;
-    const loser = players[loserIndex];
-    const winner = players[1 - loserIndex];
+    const loser = activePlayers[loserIndex];
+    const winner = activePlayers[1 - loserIndex];
 
     console.log(`[Game ${gameId}] Result - Winner: ${winner.slice(0, 6)}..., Loser: ${loser.slice(0, 6)}...`);
 
-    // Resolve the game
-    // Note: Contract automatically excludes forfeited players
+    // Resolve the game (calls addLoser + endGame)
     await onGameResolved([loser]);
-
-    console.log(`[Game ${gameId}] Game resolved successfully`);
   },
-  providerUrl: 'https://mainnet.sanko.xyz', // or your RPC URL
+
+  providerUrl: process.env.PROVIDER_URL || 'https://mainnet.sanko.xyz',
 });
 
-// Start polling for new games
-twoPlayerCoinGovernor.pollForNewGames().catch(console.error);
+// Start monitoring for events - automatically recovers unresolved games on startup
+twoPlayerCoinGovernor.start();

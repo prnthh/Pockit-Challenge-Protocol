@@ -1,7 +1,6 @@
 import './App.css'
-import { useState, useEffect } from 'react'
-import { createPublicClient, createWalletClient, http, defineChain, formatEther, custom } from 'viem'
-import contractABI from './challengeAbi'
+import { useState } from 'react'
+import { useWallet, useGameEscrow } from './hooks'
 import DemoContainer from './components/DemoContainer'
 
 // Chain configurations
@@ -57,147 +56,15 @@ export interface Game extends GameInfo {
     id: bigint
 }
 
-export { contractABI }
-
-// Wallet utilities
-const createWallet = async (customChain: ReturnType<typeof defineChain>) => {
-    if (!window.ethereum) throw new Error('No wallet found')
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-    return createWalletClient({
-        account: accounts[0] as `0x${string}`,
-        chain: customChain,
-        transport: custom(window.ethereum),
-    })
-}
-
-const switchNetwork = async (chainConfig: typeof CHAINS[ChainKey]) => {
-    if (!window.ethereum) return
-    try {
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: chainConfig.chainId }],
-        })
-    } catch (switchError: any) {
-        if (switchError.code === 4902) {
-            await window.ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                    chainId: chainConfig.chainId,
-                    chainName: chainConfig.name,
-                    nativeCurrency: chainConfig.nativeCurrency,
-                    rpcUrls: [chainConfig.rpcUrl],
-                    blockExplorerUrls: [chainConfig.blockExplorer],
-                }],
-            })
-        } else {
-            throw switchError
-        }
-    }
-}
-
-const ensureCorrectChain = async (chainConfig: typeof CHAINS[ChainKey]) => {
-    if (!window.ethereum) throw new Error('No wallet found')
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-    if (chainId !== chainConfig.chainId) await switchNetwork(chainConfig)
-}
-
-export const writeToContract = async (
-    chainConfig: typeof CHAINS[ChainKey],
-    customChain: ReturnType<typeof defineChain>,
-    functionName: string,
-    args: readonly unknown[],
-    value?: bigint
-) => {
-    await ensureCorrectChain(chainConfig)
-    const wallet = await createWallet(customChain)
-    return wallet.writeContract({
-        address: chainConfig.contractAddress as `0x${string}`,
-        abi: contractABI,
-        functionName: functionName as any,
-        args: args as any,
-        value,
-        chain: null,
-    })
-}
-
 function App() {
     const [selectedChain, setSelectedChain] = useState<ChainKey>('sepolia')
-    const [walletAddress, setWalletAddress] = useState<string>('')
-    const [balance, setBalance] = useState<string>('')
-
     const CHAIN_CONFIG = CHAINS[selectedChain]
-
-    const customChain = defineChain({
-        id: CHAIN_CONFIG.id,
-        name: CHAIN_CONFIG.name,
-        network: CHAIN_CONFIG.network,
-        nativeCurrency: CHAIN_CONFIG.nativeCurrency,
-        rpcUrls: {
-            default: {
-                http: [CHAIN_CONFIG.rpcUrl],
-            },
-        },
+    
+    const { address, balance, connectWallet, updateBalance } = useWallet({ chainConfig: CHAIN_CONFIG })
+    const { error: gameError, clearError } = useGameEscrow({ 
+        chainConfig: CHAIN_CONFIG, 
+        walletAddress: address 
     })
-
-    const client = createPublicClient({
-        chain: customChain,
-        transport: http(),
-    })
-
-    const updateBalance = async (address: string) => {
-        const bal = await client.getBalance({ address: address as `0x${string}` })
-        setBalance(`${formatEther(bal)} ${CHAIN_CONFIG.nativeCurrency.symbol}`)
-    }
-
-    const connectWallet = async () => {
-        if (window.ethereum) {
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-                const address = accounts[0]
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-                if (chainId !== CHAIN_CONFIG.chainId) await switchNetwork(CHAIN_CONFIG)
-                setWalletAddress(address)
-                await updateBalance(address)
-            } catch (error) {
-                console.error('User denied account access', error)
-            }
-        } else {
-            alert('Please install MetaMask or another Ethereum wallet.')
-        }
-    }
-
-    useEffect(() => {
-        const checkWallet = async () => {
-            if (window.ethereum) {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-                if (accounts.length > 0) {
-                    setWalletAddress(accounts[0])
-                    await updateBalance(accounts[0])
-                }
-            }
-        }
-        checkWallet()
-    }, [])
-
-    useEffect(() => {
-        const updateBalanceOnChainChange = async () => {
-            if (walletAddress) {
-                const bal = await client.getBalance({
-                    address: walletAddress as `0x${string}`,
-                })
-                setBalance(`${formatEther(bal)} ${CHAIN_CONFIG.nativeCurrency.symbol}`)
-            } else {
-                setBalance(`0 ${CHAIN_CONFIG.nativeCurrency.symbol}`)
-            }
-        }
-        updateBalanceOnChainChange()
-    }, [client, walletAddress, CHAIN_CONFIG.nativeCurrency.symbol])
-
-    useEffect(() => {
-        if (walletAddress) {
-            switchNetwork(CHAIN_CONFIG)
-        }
-    }, [selectedChain])
 
     return (
         <div className="app-container">
@@ -235,24 +102,42 @@ function App() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <button className="connect-button" onClick={connectWallet}>
-                            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}
+                            {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet'}
                         </button>
 
                         <div
                             className="balance"
-                            onClick={() => walletAddress && updateBalance(walletAddress)}
-                            style={{ cursor: walletAddress ? 'pointer' : 'default' }}
+                            onClick={updateBalance}
+                            style={{ cursor: address ? 'pointer' : 'default' }}
                         >
-                            {balance}
+                            {balance} {CHAIN_CONFIG.nativeCurrency.symbol}
                         </div>
                     </div>
                 </div>
             </header>
 
+            {gameError && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    right: '20px',
+                    background: '#dc2626',
+                    color: 'white',
+                    padding: '1rem',
+                    borderRadius: '0.5rem',
+                    maxWidth: '300px',
+                    fontSize: '0.875rem',
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem' }}>
+                        <span>{gameError}</span>
+                        <button onClick={clearError} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
+                    </div>
+                </div>
+            )}
+
             <DemoContainer
-                walletAddress={walletAddress}
+                walletAddress={address}
                 chainConfig={CHAIN_CONFIG}
-                customChain={customChain}
             />
         </div>
     )

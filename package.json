@@ -7,7 +7,9 @@
     "build": "npm pack",
     "prepublishOnly": "npm run build",
     "dev": "npm run dev --prefix docs",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report",
+    "test:verbose": "forge test -vvv",
     "coinflip": "node server/coinFlipGovernor.js",
     "x402": "npm run start --prefix server"
   },

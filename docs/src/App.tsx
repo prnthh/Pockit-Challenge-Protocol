@@ -8,7 +8,7 @@ import DemoContainer from './components/DemoContainer'
 export const CHAINS = {
     sanko: {
         id: 1992,
-        chainId: '0x7c8', // 1992 in hex
+        chainId: '0x7c8',
         name: 'Sanko Testnet',
         network: 'custom',
         nativeCurrency: {
@@ -23,7 +23,7 @@ export const CHAINS = {
     },
     sepolia: {
         id: 11155111,
-        chainId: '0xaa36a7', // 11155111 in hex
+        chainId: '0xaa36a7',
         name: 'Sepolia Testnet',
         network: 'sepolia',
         nativeCurrency: {
@@ -125,10 +125,8 @@ function App() {
     const [walletAddress, setWalletAddress] = useState<string>('')
     const [balance, setBalance] = useState<string>('')
 
-    // Get current chain configuration
     const CHAIN_CONFIG = CHAINS[selectedChain]
 
-    // Create chain and client based on selected chain
     const customChain = defineChain({
         id: CHAIN_CONFIG.id,
         name: CHAIN_CONFIG.name,
@@ -181,7 +179,6 @@ function App() {
         checkWallet()
     }, [])
 
-    // Update balance when client changes (which happens when chain changes)
     useEffect(() => {
         const updateBalanceOnChainChange = async () => {
             if (walletAddress) {
@@ -196,7 +193,6 @@ function App() {
         updateBalanceOnChainChange()
     }, [client, walletAddress, CHAIN_CONFIG.nativeCurrency.symbol])
 
-    // Switch wallet network when chain changes
     useEffect(() => {
         if (walletAddress) {
             switchNetwork(CHAIN_CONFIG)

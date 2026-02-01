@@ -121,7 +121,7 @@ export const writeToContract = async (
 }
 
 function App() {
-    const [selectedChain, setSelectedChain] = useState<ChainKey>('sanko')
+    const [selectedChain, setSelectedChain] = useState<ChainKey>('sepolia')
     const [walletAddress, setWalletAddress] = useState<string>('')
     const [balance, setBalance] = useState<string>('')
 

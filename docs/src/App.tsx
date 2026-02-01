@@ -2,7 +2,7 @@ import './App.css'
 import { useState, useEffect } from 'react'
 import { createPublicClient, createWalletClient, http, defineChain, formatEther, custom } from 'viem'
 import contractABI from './challengeAbi'
-import SinglePage from './components/SinglePage'
+import DemoContainer from './components/DemoContainer'
 
 // Chain configurations
 export const CHAINS = {
@@ -253,7 +253,7 @@ function App() {
                 </div>
             </header>
 
-            <SinglePage
+            <DemoContainer
                 walletAddress={walletAddress}
                 chainConfig={CHAIN_CONFIG}
                 customChain={customChain}

@@ -7,7 +7,9 @@
     "build": "npm pack",
     "prepublishOnly": "npm run build",
     "dev": "npm run dev --prefix docs",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report",
+    "test:verbose": "forge test -vvv",
     "coinflip": "node server/coinFlipGovernor.js",
     "x402": "npm run start --prefix server"
   },
@@ -23,8 +25,11 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
+    "forge-std": "^1.1.2",
     "tsx": "^4.21.0",
     "viem": "^2.43.5"
   }

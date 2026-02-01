@@ -1,103 +1,227 @@
-# PvP Staking Diamond - Minimal, Composable 1v1 Escrow
+# PvPStaking Diamond - Full-Featured Escrow
 
 ## Overview
 
-A minimal Diamond (EIP-2535) optimized for **1v1 PvP games with staking**. Any game contract can add PvP mechanics by:
+A **complete escrow system** with all GameEscrow features, now as a modular Diamond (EIP-2535) architecture:
 
-1. Deploying a game-specific facet
-2. Calling `addFacet()` to attach it to the diamond
-3. Using `LibPvPStaking.storage()` to access shared stake data
+- **N-player matches** (2, 3, 4, ...)
+- **Governor-controlled** (create, ready, mark losers, resolve)
+- **Whitelist support** (restrict who joins)
+- **Forfeit mechanism** (withdraw before start)
+- **Dynamic fees** (set at resolution time)
+- **Multi-winner splits** (prize pool divided equally)
+- **Facet composable** (attach game logic as new facets)
 
-**Key design**: No game logic. Just escrow.
+**Key difference from GameEscrow**: Same logic, but now extensible via facets + governors can add game-specific features.
 
 ## Architecture
 
 ```
-Diamond (Proxy)
-  ├─ PvPStakingFacet (core: create/join/resolve matches)
-  └─ DiamondManagerFacet (add/remove facets)
-  
-  (Optional: Add game-specific facets)
-  ├─ MyGameFacet (rock-paper-scissors logic)
-  ├─ ChessGameFacet (chess AI + move validation)
-  └─ ... (any game that needs staking)
+Diamond Proxy
+  ├─ PvPStakingFacet (create, join, ready, addLoser, endMatch, withdraw, queries)
+  ├─ DiamondManagerFacet (add/remove facets)
+  ├─ GovernanceFacet (owner, fee management)
+  └─ (Optional: Custom game facets)
 ```
 
-All facets share `LibPvPStaking.storage()` for stake data.
-
-## Core Concepts
-
-### Match Lifecycle
+## Match Lifecycle
 
 ```
-Player1 calls createMatch(1 ETH)
-  ↓ Contract holds 1 ETH
-  
-Player2 calls joinMatch()
-  ↓ Contract holds 2 ETH total
-  
-(Game happens off-chain or on-chain)
+Governor creates match (1 ETH stake, 4 max players, whitelist optional)
   ↓
-Owner calls resolveMatch(winner)
-  ↓ Winner gets 2 ETH, contract empty
-```
-
-### Storage
-
-```solidity
-LibPvPStaking.Storage (shared by all facets):
-  - matches: mapping(matchId → Match data)
-  - nextMatchId: uint256
-  - owner: address
-
-Match:
-  - player1: address
-  - player2: address
-  - stakeAmount: uint256
-  - winner: address (address(0) = unresolved)
-  - resolved: bool
+Players join one-by-one (each pays 1 ETH)
+  ↓
+Governor calls setMatchReady()
+  ↓
+Governor marks losers: addLoser(player1), addLoser(player2)
+  ↓
+Governor ends match with fee %:
+  endMatch(matchId, 10%) 
+  ↓
+Winners split remaining pot equally
 ```
 
 ## API
 
-### PvPStakingFacet
+### Core Match Functions
 
+#### Create Match (Governor Initiates)
 ```solidity
-// Create 1v1 match (player1 posts stake)
-uint256 matchId = diamond.createMatch{value: 1 ether}(1 ether);
-
-// Join match (player2 posts stake)
-diamond.joinMatch(matchId);
-
-// Resolve match (owner/oracle determines winner)
-diamond.resolveMatch(matchId, winnerAddress);
-
-// Query match
-(player1, player2, stakeAmount, winner, resolved) = diamond.getMatch(matchId);
-
-// Withdraw unclaimed funds (owner only)
-diamond.withdraw();
+uint256 matchId = diamond.createMatch{value: 1 ether}(
+    address governor,       // Game controller
+    uint256 stakeAmount,    // 1 ether
+    uint256 maxPlayers,     // 0 = unlimited, 4 = max 4
+    address[] whitelist     // [] = public, or list of allowed
+);
 ```
 
-### DiamondManagerFacet
+#### Join Match
+```solidity
+diamond.joinMatch{value: 1 ether}(matchId);
+// Player posts stake, enters pool
+```
+
+#### Governor Starts Match
+```solidity
+diamond.setMatchReady(matchId);
+// No more joiners allowed
+```
+
+#### Governor Marks Losers
+```solidity
+diamond.addLoser(matchId, player1);
+diamond.addLoser(matchId, player2);
+// Non-losers are winners
+```
+
+#### Forfeit Before Start
+```solidity
+diamond.forfeitMatch(matchId);
+// Player gets stake back if match not ready
+```
+
+#### Resolve Match
+```solidity
+diamond.endMatch(matchId, 10); // 10% fee
+// Distributes pot to winners, fee to governor
+```
+
+#### Query Functions
+```solidity
+// Get full match info
+MatchInfo memory m = diamond.getMatch(matchId);
+
+// List not-started matches
+uint256[] memory ids = diamond.getNotStartedMatches(0, 100);
+
+// List ongoing matches
+uint256[] memory ids = diamond.getOngoingMatches(0, 100);
+
+// Governor's matches
+uint256[] memory ids = diamond.getGovernorMatches(
+    governor,
+    true,   // include ended
+    true,   // include ongoing
+    true,   // include not started
+    0,      // offset
+    100     // limit
+);
+
+// House fee
+uint256 fee = diamond.getHouseFeePercentage();
+```
+
+## Usage Examples
+
+### Example 1: 1v1 Game (2 Players)
 
 ```solidity
-// Add game-specific facet
-bytes4[] memory selectors = [MyGame.play.selector, MyGame.claim.selector];
-diamond.addFacet(myGameFacetAddress, selectors);
+// Governor creates 1v1 match
+uint256 matchId = diamond.createMatch{value: 1 ether}(
+    governor,
+    1 ether,
+    2,          // Exactly 2 players
+    new address[](0)
+);
 
-// Remove facet
-bytes4[] memory selectors = [MyGame.play.selector];
-diamond.removeFacet(selectors);
+// Player 2 joins
+diamond.joinMatch{value: 1 ether}(matchId);
 
-// Get facet address for function
-address facet = diamond.facetAddress(bytes4 selector);
+// Governor starts
+diamond.setMatchReady(matchId);
 
-// Transfer ownership
-diamond.transferOwnership(newOwner);
+// (Game happens, player1 wins)
 
-// Get owner
-address owner = diamond.owner();
+// Governor marks player2 as loser
+diamond.addLoser(matchId, player2);
+
+// Resolve: Player1 gets 1.8 ETH (2 - 10% fee)
+diamond.endMatch(matchId, 10);
+```
+
+### Example 2: 4-Player Tournament
+
+```solidity
+// Governor creates tournament
+uint256 matchId = diamond.createMatch{value: 2 ether}(
+    governor,
+    2 ether,
+    4,          // Max 4 players
+    new address[](0)
+);
+
+// 3 more players join (total 4, each 2 ETH = 8 ETH pot)
+diamond.joinMatch{value: 2 ether}(matchId); // Player 2
+diamond.joinMatch{value: 2 ether}(matchId); // Player 3
+diamond.joinMatch{value: 2 ether}(matchId); // Player 4
+
+// Governor starts
+diamond.setMatchReady(matchId);
+
+// Tournament happens, players 1 & 3 win
+diamond.addLoser(matchId, player2);
+diamond.addLoser(matchId, player4);
+
+// Resolve: 8 ETH pot - 20% fee (1.6 ETH) = 6.4 ETH to winners
+// Each winner gets 3.2 ETH
+diamond.endMatch(matchId, 20); // 20% fee
+```
+
+### Example 3: Whitelisted VIP Match
+
+```solidity
+address[] memory whitelist = new address[](2);
+whitelist[0] = vip1;
+whitelist[1] = vip2;
+
+uint256 matchId = diamond.createMatch{value: 5 ether}(
+    governor,
+    5 ether,
+    3,
+    whitelist   // Only VIP + creator can join
+);
+
+// Only whitelisted can join
+require(diamond.joinMatch{value: 5 ether}(matchId)); // vip1 joins
+require(diamond.joinMatch{value: 5 ether}(matchId)); // vip2 joins
+// Others rejected
+```
+
+## Facet System
+
+### Add Custom Game Facet
+
+```solidity
+// 1. Create game facet
+contract RockPaperScissorsFacet {
+    using LibPvPStaking for LibPvPStaking.StorageData;
+
+    function commit(uint256 matchId, bytes32 commitHash) external {
+        LibPvPStaking.Match storage m = 
+            LibPvPStaking.getStorage().matches[matchId];
+        // RPS commit logic
+    }
+
+    function reveal(uint256 matchId, uint8 move, bytes32 salt) external {
+        // RPS reveal logic
+        // Determine winner
+        // Can call endMatch after winner determined
+    }
+}
+
+// 2. Deploy facet
+RockPaperScissorsFacet rps = new RockPaperScissorsFacet();
+
+// 3. Add to diamond
+bytes4[] memory selectors = new bytes4[](2);
+selectors[0] = RockPaperScissorsFacet.commit.selector;
+selectors[1] = RockPaperScissorsFacet.reveal.selector;
+
+diamond.addFacet(address(rps), selectors);
+
+// 4. Use game
+diamond.commit(matchId, commitHash);
+diamond.reveal(matchId, move, salt);
 ```
 
 ## Deployment
@@ -124,209 +248,186 @@ Output:
 Diamond deployed at: 0x...
 PvPStakingFacet deployed at: 0x...
 DiamondManagerFacet deployed at: 0x...
+GovernanceFacet deployed at: 0x...
 ```
 
-## Using with Games
+## Data Structures
 
-### Example 1: Rock-Paper-Scissors
-
-```solidity
-// contracts/facets/RockPaperScissorsFacet.sol
-
-import "../PvPStaking.sol";
-
-contract RockPaperScissorsFacet {
-    using LibPvPStaking for LibPvPStaking.Storage;
-
-    enum Move { None, Rock, Paper, Scissors }
-
-    struct GameState {
-        bytes32 player1CommitHash;
-        Move player1Move;
-        Move player2Move;
-    }
-
-    mapping(uint256 => GameState) gameStates;
-
-    // Commit phase (player1 commits hashed move)
-    function commit(uint256 matchId, bytes32 commitHash) external {
-        LibPvPStaking.Match storage match = LibPvPStaking.storage().matches[matchId];
-        require(msg.sender == match.player1);
-        gameStates[matchId].player1CommitHash = commitHash;
-    }
-
-    // Reveal phase (player2 moves, player1 reveals)
-    function reveal(uint256 matchId, Move player1Move, bytes32 salt) external {
-        LibPvPStaking.Match storage match = LibPvPStaking.storage().matches[matchId];
-        require(msg.sender == match.player2);
-
-        GameState storage state = gameStates[matchId];
-        
-        // Verify commit
-        require(
-            keccak256(abi.encode(player1Move, salt)) == state.player1CommitHash,
-            "Invalid reveal"
-        );
-
-        // Determine winner
-        Move player2Move = Move.Rock; // Simplified
-        address winner = determineWinner(player1Move, player2Move);
-
-        // Resolve via PvP facet
-        // (Note: Need to expose resolveMatch or call separately)
-    }
-
-    function determineWinner(Move m1, Move m2) internal pure returns (address winner) {
-        // RPS logic here
-    }
-}
-
-// Deploy:
-// RockPaperScissorsFacet rps = new RockPaperScissorsFacet();
-// bytes4[] selectors = [RPS.commit.selector, RPS.reveal.selector];
-// diamond.addFacet(address(rps), selectors);
-```
-
-### Example 2: Chess
+### Match
 
 ```solidity
-// contracts/facets/ChessFacet.sol
-
-import "../PvPStaking.sol";
-
-contract ChessFacet {
-    using LibPvPStaking for LibPvPStaking.Storage;
-
-    mapping(uint256 => bytes) boardStates;
-    mapping(uint256 => address) currentPlayer;
-
-    function makeMove(uint256 matchId, bytes calldata move) external {
-        LibPvPStaking.Match storage match = LibPvPStaking.storage().matches[matchId];
-        require(msg.sender == currentPlayer[matchId]);
-        
-        // Validate move against boardStates[matchId]
-        // Update board
-        // Check for checkmate
-        // If game over: winner determined
-    }
+struct Match {
+    address governor;           // Match controller
+    bool isReady;              // Game started
+    bool isEnded;              // Resolved + distributed
+    
+    uint256 stakeAmount;       // Per player
+    uint256 maxPlayers;        // 0 = unlimited
+    uint256 activePlayers;     // Current count
+    
+    address[] players;         // All joined
+    address[] losers;          // Marked by governor
+    address[] whitelist;       // Allowed if set
+    address[] forfeited;       // Withdrew before start
+    
+    mapping(address => bool) isLoser;
+    mapping(address => bool) isWhitelisted;
+    mapping(address => bool) hasForfeit;
+    mapping(address => bool) isPlayer;
 }
 ```
 
-## Adding Facets (Step by Step)
-
-1. **Create facet contract**:
-   ```solidity
-   contract MyGameFacet {
-       using LibPvPStaking for LibPvPStaking.Storage;
-       
-       function play(uint256 matchId) external {
-           LibPvPStaking.Match storage match = LibPvPStaking.storage().matches[matchId];
-           // Your game logic
-       }
-   }
-   ```
-
-2. **Deploy facet**:
-   ```bash
-   forge create contracts/facets/MyGameFacet.sol
-   ```
-
-3. **Add to diamond** (owner only):
-   ```solidity
-   bytes4[] memory selectors = new bytes4[](1);
-   selectors[0] = MyGameFacet.play.selector;
-   
-   IManageable(diamond).addFacet(facetAddress, selectors);
-   ```
-
-4. **Call game functions directly on diamond**:
-   ```solidity
-   // Diamond delegates to MyGameFacet
-   diamond.play(matchId);
-   ```
-
-## Storage Safety
-
-All facets access the same storage:
+### MatchInfo (Read-Only)
 
 ```solidity
-LibPvPStaking.Storage storage s = LibPvPStaking.storage();
+struct MatchInfo {
+    address governor;
+    uint256 stakeAmount;
+    uint256 maxPlayers;
+    uint256 activePlayers;
+    bool isReady;
+    bool isEnded;
+    address[] players;
+    address[] losers;
+    address[] whitelist;
+    address[] forfeited;
+}
 ```
 
-**Key guarantee**: Storage position is deterministic (keccak256 hash). No collisions.
+## Storage
 
-**Safe to add facets**:
-- ✅ New functions
-- ✅ New facet storage (in facet, not LibPvPStaking)
-- ✅ Read existing matches
+All facets access shared storage:
 
-**NOT safe**:
-- ❌ Modify LibPvPStaking.Storage layout
-- ❌ Delete existing structs
+```solidity
+LibPvPStaking.StorageData {
+    mapping(uint256 => Match) matches;
+    uint256 nextMatchId;
+    address owner;
+    uint256 houseFeePercentage;
+}
+```
 
-## Gas Efficiency
+**Deterministic position** ensures no collisions across facets.
 
-- **createMatch**: ~50k gas (store match + event)
-- **joinMatch**: ~40k gas (update match)
-- **resolveMatch**: ~20k gas (mark resolved) + **2 ETH transfer** (~2k)
-- **getMatch**: 0 gas (view)
+## Prize Distribution
 
-Total for 1v1 game: ~110k gas + transfers.
+### Formula
+
+```
+totalStake = stakeAmount × activePlayers
+governorFee = (totalStake × feePercentage) / 100
+prizePool = totalStake - governorFee
+
+winnerCount = players who are NOT losers AND NOT forfeited
+
+If winnerCount > 0:
+  prizePerWinner = prizePool / winnerCount
+  Each winner gets prizePerWinner (+ 1 wei for remainder)
+
+If winnerCount == 0:
+  Split prizePool among non-forfeited players
+```
+
+### Example (4 Players, 1 ETH each)
+
+```
+Total stake: 4 ETH
+Governor fee (10%): 0.4 ETH
+Prize pool: 3.6 ETH
+
+Case 1: 2 winners (players 1, 3)
+  Each winner: 3.6 / 2 = 1.8 ETH
+
+Case 2: 1 winner (player 1)
+  Winner: 3.6 ETH
+
+Case 3: 0 winners (all marked losers)
+  Non-forfeited players split 3.6 ETH equally
+```
+
+## Governance
+
+### Owner Functions
+
+```solidity
+// Set house fee (0-100%)
+diamond.setHouseFeePercentage(15);
+
+// Transfer ownership
+diamond.transferOwnership(newOwner);
+
+// Get current owner
+address owner = diamond.getOwner();
+
+// Initialize (one-time)
+diamond.initializeOwner(owner);
+diamond.initializeHouseFee(10);
+
+// Withdraw unclaimed funds
+diamond.withdraw();
+```
+
+## Facet Management
+
+### Add Facet
+
+```solidity
+bytes4[] memory selectors = new bytes4[](2);
+selectors[0] = MyFacet.func1.selector;
+selectors[1] = MyFacet.func2.selector;
+
+diamond.addFacet(address(myFacet), selectors);
+```
+
+### Remove Facet
+
+```solidity
+bytes4[] memory selectors = new bytes4[](2);
+selectors[0] = MyFacet.func1.selector;
+selectors[1] = MyFacet.func2.selector;
+
+diamond.removeFacet(selectors);
+```
+
+### Query Facet
+
+```solidity
+address facet = diamond.facetAddress(bytes4(keccak256("func1()")));
+```
+
+## Safety Guarantees
+
+- ✅ No storage collisions (shared LibPvPStaking storage via deterministic hash position)
+- ✅ Governor controls game flow (only they can ready, mark losers, resolve)
+- ✅ Players can verify stakes held (on-chain, transparent)
+- ✅ Winners always paid (all stake + fees collected before payout)
+- ✅ Facets don't interfere (independent function spaces)
+
+## Limitations
+
+| Feature | Limitation | Note |
+|---------|-----------|------|
+| Max players | No hard limit | Set `maxPlayers` on creation |
+| Forfeit | Only before start | Post-start requires governor intervention |
+| Fee | Set per match | Can be 0% (pure pool split) or up to 100% |
+| Dispute | No built-in | Add custom facet if needed |
+| Auto-resolution | Not supported | Governor always calls endMatch |
 
 ## Testing
 
 ```bash
-# Run existing tests (GameEscrow)
+# Run all tests
 forge test
 
-# (No tests yet for PvP; add to test/PvPStaking.t.sol)
-```
+# Specific test
+forge test --match test_createGame
 
-## Limitations & Trade-offs
-
-| Feature | Limitation | Workaround |
-|---------|-----------|-----------|
-| Game logic | None (add facets) | Create custom facet |
-| Oracle resolution | Owner-only resolve | Multi-sig or oracle service |
-| Stake amounts | Per-match fixed | Design game for fixed stakes |
-| Refunds | No forfeit after join | Resolve with player1 as "winner" |
-| Dispute resolution | Not built in | Implement in game facet + governance |
-
-## Extending
-
-### Add Withdraw After Join (Forfeit)
-
-```solidity
-// In custom facet
-function forfeit(uint256 matchId) external {
-    LibPvPStaking.Match storage match = LibPvPStaking.storage().matches[matchId];
-    require(msg.sender == match.player1 || msg.sender == match.player2);
-    require(!match.resolved);
-    
-    // Return stake if not full
-    if (match.player2 == address(0)) {
-        // Only player1
-        (bool success,) = msg.sender.call{value: match.stakeAmount}("");
-        require(success);
-    }
-}
-```
-
-### Add Fee/House Cut
-
-```solidity
-// Modify PvPStakingFacet.resolveMatch()
-uint256 houseFee = (match.stakeAmount * 2) / 100; // 1%
-uint256 prize = (match.stakeAmount * 2) - houseFee;
-
-(bool success,) = winner.call{value: prize}("");
-require(success);
-
-// House collects via withdraw()
+# Gas report
+forge test --gas-report
 ```
 
 ## References
 
 - [EIP-2535: Diamonds](https://eips.ethereum.org/EIPS/eip-2535)
-- [Diamond GitHub](https://github.com/mudgen/diamond)
-- Source: `/contracts/PvPStaking.sol`
+- [GameEscrow (contract.sol)](./contracts/contract.sol) - Original design
+- [PVPSTAKING.md](./PVPSTAKING.md) - Previous minimal version

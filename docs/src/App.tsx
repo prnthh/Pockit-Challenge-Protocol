@@ -5,6 +5,21 @@ import DemoContainer from './components/DemoContainer'
 
 // Chain configurations
 export const CHAINS = {
+    localhost: {
+        id: 31337,
+        chainId: '0x7a69',
+        name: 'Localhost (Anvil)',
+        network: 'localhost',
+        nativeCurrency: {
+            decimals: 18,
+            name: 'ETH',
+            symbol: 'ETH',
+        },
+        rpcUrl: 'http://127.0.0.1:8545',
+        blockExplorer: 'http://127.0.0.1:8545/',
+        faucetUrl: 'http://127.0.0.1:8545/',
+        contractAddress: import.meta.env.VITE_LOCAL_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000',
+    },
     sanko: {
         id: 1992,
         chainId: '0x7c8',
@@ -57,7 +72,9 @@ export interface Game extends GameInfo {
 }
 
 function App() {
-    const [selectedChain, setSelectedChain] = useState<ChainKey>('sepolia')
+    const [selectedChain, setSelectedChain] = useState<ChainKey>(
+        import.meta.env.VITE_LOCAL_CONTRACT_ADDRESS ? 'localhost' : 'sepolia'
+    )
     const CHAIN_CONFIG = CHAINS[selectedChain]
     
     const { address, balance, connectWallet, updateBalance } = useWallet({ chainConfig: CHAIN_CONFIG })
@@ -77,6 +94,7 @@ function App() {
                         onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', border: '1px solid #3b82f6', background: '#1a1a1a', color: 'white', cursor: 'pointer' }}
                     >
+                        {import.meta.env.VITE_LOCAL_CONTRACT_ADDRESS && <option value="localhost">Localhost (Anvil)</option>}
                         <option value="sanko">Sanko Testnet</option>
                         <option value="sepolia">Sepolia Testnet</option>
                     </select>

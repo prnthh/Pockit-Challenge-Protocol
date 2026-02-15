@@ -43,7 +43,7 @@ const twoPlayerCoinGovernor = new Governor({
     await onGameResolved([loser]);
   },
 
-  providerUrl: process.env.PROVIDER_URL || 'https://mainnet.sanko.xyz',
+  providerUrl: process.env.PROVIDER_URL || 'https://eth.llamarpc.com',
 });
 
 // Start monitoring for events - automatically recovers unresolved games on startup

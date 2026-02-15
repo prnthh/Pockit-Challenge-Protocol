@@ -10,7 +10,7 @@
     <button id="connect-wallet">Connect Wallet</button>
     <p id="wallet-address"></p>
     <div id="balance">Balance: 0 DMT</div>
-    <a href="https://sanko-arb-sepolia.hub.caldera.xyz/">Get tDMT</a>
+    <a href="https://sepoliafaucet.com/">Get Sepolia ETH</a>
 
     <h2>Create a game</h2>
     <!-- Dropdown to select a governor -->
@@ -30,30 +30,17 @@
     <div id="open-games"></div>
     
     <script type="module">
-        import { createPublicClient, createWalletClient, http, defineChain, parseEther, formatEther, custom } from 'https://esm.sh/viem'
+        import { createPublicClient, createWalletClient, http, parseEther, formatEther, custom } from 'https://esm.sh/viem'
+        import { sepolia } from 'https://esm.sh/viem/chains'
         import contractABI from './contracts/abi.js'; // For ES Modules
-        const contractAddress = '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF' // Replace with your matchmaking instance address
+        const contractAddress = '0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8' // Sepolia contract address
 
-        // Define your custom chain
-        const customChain = defineChain({
-            id: 1992, // Replace with your custom chain ID
-            name: 'Sanko Testnet',
-            network: 'custom',
-            nativeCurrency: {
-                decimals: 18,
-                name: 'DMT',
-                symbol: 'DMT',
-            },
-            rpcUrls: {
-                default: {
-                    http: ['https://sanko-arb-sepolia.rpc.caldera.xyz/http'], // Replace with your custom RPC URL
-                },
-            },
-        })
+        // Use Sepolia chain from viem
+        const chain = sepolia
         
         // Create a public client for interacting with the blockchain
         const client = createPublicClient({
-            chain: customChain,
+            chain: chain,
             transport: http(),
         })
         
@@ -120,7 +107,7 @@
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
             const walletClient = createWalletClient({ 
                 account: accounts[0],
-                chain: customChain,
+                chain: chain,
                 transport: custom(window.ethereum),
             })
             
@@ -165,7 +152,7 @@
                         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
                         const walletClient = createWalletClient({ 
                             account: accounts[0],
-                            chain: customChain,
+                            chain: chain,
                             transport: custom(window.ethereum),
                         })
 

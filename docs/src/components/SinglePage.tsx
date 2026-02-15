@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { parseEther, formatEther, createPublicClient, http } from 'viem'
-import type { defineChain } from 'viem'
 import { CHAINS, writeToContract, contractABI } from '../App'
 import type { ChainKey, Game, GameInfo } from '../App'
 
@@ -59,12 +58,10 @@ function CreateGameTile({
     walletAddress,
     currencySymbol,
     chainConfig,
-    customChain,
 }: {
     walletAddress: string
     currencySymbol: string
     chainConfig: typeof CHAINS[ChainKey]
-    customChain: ReturnType<typeof defineChain>
 }) {
     const COINFLIP_GOVERNOR = '0xdBec3DC802a817EEE74a7077f734654384857E9d'
 
@@ -95,7 +92,7 @@ function CreateGameTile({
         try {
             const whitelist = whitelistInput.split(',').map(addr => addr.trim()).filter(addr => addr.length > 0).map(addr => addr as `0x${string}`)
             const maxPlayersValue = maxPlayers && !isNaN(Number(maxPlayers)) && parseFloat(maxPlayers) > 0 ? BigInt(Math.floor(parseFloat(maxPlayers))) : 0n
-            await writeToContract(chainConfig, customChain, 'createGame', [governorAddress as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist], parseEther(amount))
+            await writeToContract(chainConfig, 'createGame', [governorAddress as `0x${string}`, parseEther(amount), maxPlayersValue, whitelist], parseEther(amount))
         } catch (error) {
             console.error('Error creating game:', error)
             alert('Failed to create game: ' + (error as Error).message)
@@ -205,17 +202,15 @@ function JoinGameTile({
     walletAddress,
     currencySymbol,
     chainConfig,
-    customChain,
 }: {
     openGames: Game[]
     walletAddress: string
     currencySymbol: string
     chainConfig: typeof CHAINS[ChainKey]
-    customChain: ReturnType<typeof defineChain>
 }) {
     const executeWrite = async (action: string, functionName: string, args: unknown[], value?: bigint) => {
         try {
-            await writeToContract(chainConfig, customChain, functionName, args, value)
+            await writeToContract(chainConfig, functionName, args, value)
         } catch (error) {
             console.error(`Error ${action}:`, error)
             alert(`Failed to ${action}: ${(error as Error).message}`)
@@ -290,13 +285,11 @@ function GovernGamesTile({
     walletAddress,
     currencySymbol,
     chainConfig,
-    customChain,
 }: {
     ongoingGames: Game[]
     walletAddress: string
     currencySymbol: string
     chainConfig: typeof CHAINS[ChainKey]
-    customChain: ReturnType<typeof defineChain>
 }) {
     const calculatePoolSplit = (game: Game) => {
         const totalPool = game.stakeAmount * BigInt(game.players.length)
@@ -315,7 +308,7 @@ function GovernGamesTile({
 
     const executeWrite = async (action: string, functionName: string, args: unknown[], value?: bigint) => {
         try {
-            await writeToContract(chainConfig, customChain, functionName, args, value)
+            await writeToContract(chainConfig, functionName, args, value)
         } catch (error) {
             console.error(`Error ${action}:`, error)
             alert(`Failed to ${action}: ${(error as Error).message}`)
@@ -464,11 +457,9 @@ function PastGamesTile({
 function SinglePage({
     walletAddress,
     chainConfig,
-    customChain,
 }: {
     walletAddress: string
     chainConfig: typeof CHAINS[ChainKey]
-    customChain: ReturnType<typeof defineChain>
 }) {
     const [openGames, setOpenGames] = useState<Game[]>([])
     const [ongoingGames, setOngoingGames] = useState<Game[]>([])
@@ -477,7 +468,7 @@ function SinglePage({
 
     // Create public client for reading contract data
     const client = createPublicClient({
-        chain: customChain,
+        chain: chainConfig.chain,
         transport: http(),
     })
 
@@ -571,30 +562,27 @@ function SinglePage({
         <div className="tiles-container">
             <CreateGameTile
                 walletAddress={walletAddress}
-                currencySymbol={chainConfig.nativeCurrency.symbol}
+                currencySymbol={chainConfig.chain.nativeCurrency.symbol}
                 chainConfig={chainConfig}
-                customChain={customChain}
             />
 
             <JoinGameTile
                 openGames={openGames}
                 walletAddress={walletAddress}
-                currencySymbol={chainConfig.nativeCurrency.symbol}
+                currencySymbol={chainConfig.chain.nativeCurrency.symbol}
                 chainConfig={chainConfig}
-                customChain={customChain}
             />
 
             <GovernGamesTile
                 ongoingGames={ongoingGames}
                 walletAddress={walletAddress}
-                currencySymbol={chainConfig.nativeCurrency.symbol}
+                currencySymbol={chainConfig.chain.nativeCurrency.symbol}
                 chainConfig={chainConfig}
-                customChain={customChain}
             />
 
             <PastGamesTile
                 pastGames={pastGames}
-                currencySymbol={chainConfig.nativeCurrency.symbol}
+                currencySymbol={chainConfig.chain.nativeCurrency.symbol}
             />
         </div>
     )

@@ -1,40 +1,21 @@
 import './App.css'
 import { useState, useEffect } from 'react'
-import { createPublicClient, createWalletClient, http, defineChain, formatEther, custom } from 'viem'
+import { createPublicClient, createWalletClient, http, formatEther, custom } from 'viem'
+import { mainnet, sepolia } from 'viem/chains'
 import contractABI from './challengeAbi'
 import SinglePage from './components/SinglePage'
 
 // Chain configurations
 export const CHAINS = {
-    sanko: {
-        id: 1992,
-        chainId: '0x7c8', // 1992 in hex
-        name: 'Sanko Testnet',
-        network: 'custom',
-        nativeCurrency: {
-            decimals: 18,
-            name: 'DMT',
-            symbol: 'DMT',
-        },
-        rpcUrl: 'https://sanko-arb-sepolia.rpc.caldera.xyz/http',
-        blockExplorer: 'https://sanko-arb-sepolia.hub.caldera.xyz/',
-        faucetUrl: 'https://sanko-arb-sepolia.hub.caldera.xyz/',
-        contractAddress: '0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8',
+    mainnet: {
+        chain: mainnet,
+        contractAddress: '0xb8f26231ab263ed6c85f2a602a383d597936164b',
+        faucetUrl: undefined,
     },
     sepolia: {
-        id: 11155111,
-        chainId: '0xaa36a7', // 11155111 in hex
-        name: 'Sepolia Testnet',
-        network: 'sepolia',
-        nativeCurrency: {
-            decimals: 18,
-            name: 'Sepolia ETH',
-            symbol: 'SEP',
-        },
-        rpcUrl: 'https://rpc.sepolia.org',
-        blockExplorer: 'https://sepolia.etherscan.io/',
+        chain: sepolia,
+        contractAddress: '0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8',
         faucetUrl: 'https://sepoliafaucet.com/',
-        contractAddress: '0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87',
     },
 } as const
 
@@ -60,33 +41,33 @@ export interface Game extends GameInfo {
 export { contractABI }
 
 // Wallet utilities
-const createWallet = async (customChain: ReturnType<typeof defineChain>) => {
+const createWallet = async (chain: typeof mainnet | typeof sepolia) => {
     if (!window.ethereum) throw new Error('No wallet found')
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
     return createWalletClient({
         account: accounts[0] as `0x${string}`,
-        chain: customChain,
+        chain: chain,
         transport: custom(window.ethereum),
     })
 }
 
-const switchNetwork = async (chainConfig: typeof CHAINS[ChainKey]) => {
+const switchNetwork = async (chain: typeof mainnet | typeof sepolia) => {
     if (!window.ethereum) return
     try {
         await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: chainConfig.chainId }],
+            params: [{ chainId: `0x${chain.id.toString(16)}` }],
         })
     } catch (switchError: any) {
         if (switchError.code === 4902) {
             await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
-                    chainId: chainConfig.chainId,
-                    chainName: chainConfig.name,
-                    nativeCurrency: chainConfig.nativeCurrency,
-                    rpcUrls: [chainConfig.rpcUrl],
-                    blockExplorerUrls: [chainConfig.blockExplorer],
+                    chainId: `0x${chain.id.toString(16)}`,
+                    chainName: chain.name,
+                    nativeCurrency: chain.nativeCurrency,
+                    rpcUrls: chain.rpcUrls.default.http,
+                    blockExplorerUrls: chain.blockExplorers?.default ? [chain.blockExplorers.default.url] : [],
                 }],
             })
         } else {
@@ -95,21 +76,22 @@ const switchNetwork = async (chainConfig: typeof CHAINS[ChainKey]) => {
     }
 }
 
-const ensureCorrectChain = async (chainConfig: typeof CHAINS[ChainKey]) => {
+const ensureCorrectChain = async (chain: typeof mainnet | typeof sepolia) => {
     if (!window.ethereum) throw new Error('No wallet found')
     const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-    if (chainId !== chainConfig.chainId) await switchNetwork(chainConfig)
+    const expectedChainId = `0x${chain.id.toString(16)}`
+    if (chainId !== expectedChainId) await switchNetwork(chain)
 }
 
 export const writeToContract = async (
     chainConfig: typeof CHAINS[ChainKey],
-    customChain: ReturnType<typeof defineChain>,
     functionName: string,
     args: readonly unknown[],
     value?: bigint
 ) => {
-    await ensureCorrectChain(chainConfig)
-    const wallet = await createWallet(customChain)
+    const chain = chainConfig.chain
+    await ensureCorrectChain(chain)
+    const wallet = await createWallet(chain)
     return wallet.writeContract({
         address: chainConfig.contractAddress as `0x${string}`,
         abi: contractABI,
@@ -121,34 +103,23 @@ export const writeToContract = async (
 }
 
 function App() {
-    const [selectedChain, setSelectedChain] = useState<ChainKey>('sanko')
+    const [selectedChain, setSelectedChain] = useState<ChainKey>('sepolia')
     const [walletAddress, setWalletAddress] = useState<string>('')
     const [balance, setBalance] = useState<string>('')
 
     // Get current chain configuration
     const CHAIN_CONFIG = CHAINS[selectedChain]
+    const viemChain = CHAIN_CONFIG.chain
 
-    // Create chain and client based on selected chain
-    const customChain = defineChain({
-        id: CHAIN_CONFIG.id,
-        name: CHAIN_CONFIG.name,
-        network: CHAIN_CONFIG.network,
-        nativeCurrency: CHAIN_CONFIG.nativeCurrency,
-        rpcUrls: {
-            default: {
-                http: [CHAIN_CONFIG.rpcUrl],
-            },
-        },
-    })
-
+    // Create client using viem chain
     const client = createPublicClient({
-        chain: customChain,
+        chain: viemChain,
         transport: http(),
     })
 
     const updateBalance = async (address: string) => {
         const bal = await client.getBalance({ address: address as `0x${string}` })
-        setBalance(`${formatEther(bal)} ${CHAIN_CONFIG.nativeCurrency.symbol}`)
+        setBalance(`${formatEther(bal)} ${viemChain.nativeCurrency.symbol}`)
     }
 
     const connectWallet = async () => {
@@ -157,7 +128,8 @@ function App() {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
                 const address = accounts[0]
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-                if (chainId !== CHAIN_CONFIG.chainId) await switchNetwork(CHAIN_CONFIG)
+                const expectedChainId = `0x${viemChain.id.toString(16)}`
+                if (chainId !== expectedChainId) await switchNetwork(viemChain)
                 setWalletAddress(address)
                 await updateBalance(address)
             } catch (error) {
@@ -188,18 +160,18 @@ function App() {
                 const bal = await client.getBalance({
                     address: walletAddress as `0x${string}`,
                 })
-                setBalance(`${formatEther(bal)} ${CHAIN_CONFIG.nativeCurrency.symbol}`)
+                setBalance(`${formatEther(bal)} ${viemChain.nativeCurrency.symbol}`)
             } else {
-                setBalance(`0 ${CHAIN_CONFIG.nativeCurrency.symbol}`)
+                setBalance(`0 ${viemChain.nativeCurrency.symbol}`)
             }
         }
         updateBalanceOnChainChange()
-    }, [client, walletAddress, CHAIN_CONFIG.nativeCurrency.symbol])
+    }, [client, walletAddress, viemChain.nativeCurrency.symbol])
 
     // Switch wallet network when chain changes
     useEffect(() => {
         if (walletAddress) {
-            switchNetwork(CHAIN_CONFIG)
+            switchNetwork(viemChain)
         }
     }, [selectedChain])
 
@@ -214,7 +186,7 @@ function App() {
                         onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', border: '1px solid #3b82f6', background: '#1a1a1a', color: 'white', cursor: 'pointer' }}
                     >
-                        <option value="sanko">Sanko Testnet</option>
+                        <option value="mainnet">Ethereum Mainnet</option>
                         <option value="sepolia">Sepolia Testnet</option>
                     </select>
                 </div>
@@ -225,9 +197,11 @@ function App() {
                             GitHub
                         </a>
 
-                        <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer">
-                            Get {CHAIN_CONFIG.nativeCurrency.symbol}
-                        </a>
+                        {CHAIN_CONFIG.faucetUrl && (
+                            <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer">
+                                Get {viemChain.nativeCurrency.symbol}
+                            </a>
+                        )}
 
                         <a
                             href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
@@ -256,7 +230,6 @@ function App() {
             <SinglePage
                 walletAddress={walletAddress}
                 chainConfig={CHAIN_CONFIG}
-                customChain={customChain}
             />
         </div>
     )

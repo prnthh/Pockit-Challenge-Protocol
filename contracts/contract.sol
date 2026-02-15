@@ -62,6 +62,11 @@ contract GameEscrow is ReentrancyGuard {
     event PlayerForfeited(uint256 indexed gameId, address player);
     event GameReady(uint256 indexed gameId);
     event LoserAdded(uint256 indexed gameId, address loser);
+    event GameResolved(
+        uint256 indexed gameId,
+        address[] winners,
+        address[] losers
+    );
     event GameEnded(uint256 indexed gameId);
 
     // --------------------------------------------------
@@ -243,6 +248,26 @@ contract GameEscrow is ReentrancyGuard {
             }
         }
 
+        // Build winners and losers arrays for event emission
+        address[] memory winners = new address[](winnerCount);
+        address[] memory losers = new address[](game.losers.length);
+        
+        uint256 winnerIndex = 0;
+        for (uint256 i; i < playersLength; ) {
+            address p = game.players[i];
+            if (!game.isLoser[p] && !game.hasForfeit[p]) {
+                winners[winnerIndex] = p;
+                unchecked { ++winnerIndex; }
+            }
+            unchecked { ++i; }
+        }
+        
+        for (uint256 i; i < game.losers.length; ) {
+            losers[i] = game.losers[i];
+            unchecked { ++i; }
+        }
+
+        emit GameResolved(gameId, winners, losers);
         emit GameEnded(gameId);
     }
 

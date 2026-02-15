@@ -8,7 +8,7 @@ const coinGovernor = new Governor({
   privateKey: process.env.governorPrivateKey,
   matchMakingContractAddress: process.env.matchmakingContractAddress,
   fee: 2,
-  providerUrl: process.env.PROVIDER_URL || "https://mainnet.sanko.xyz",
+  providerUrl: process.env.PROVIDER_URL || "https://eth.llamarpc.com",
 
   // Event handler: When a player creates a game, governor auto-joins as opponent
   onGameCreated: async (gameId, game, { creator, stakeAmount }) => {

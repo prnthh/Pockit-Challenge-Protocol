@@ -72,9 +72,9 @@ import Governor from '@pockit/challenge-protocol';
 
 const gov = new Governor({
   privateKey: 'your-governor-private-key',
-  matchMakingContractAddress: '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF', // Sanko testnet
+  matchMakingContractAddress: '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF', // Sepolia testnet
   fee: 5, // 5% governor fee
-  providerUrl: 'https://sanko-arb-sepolia.rpc.caldera.xyz/http', // Sanko testnet
+  providerUrl: 'https://rpc.sepolia.org', // Sepolia testnet
 
   // Event handler: Called when a player joins
   onPlayerJoined: async (gameId, game, { player }) => {
@@ -117,7 +117,7 @@ gov.start();
 const { ethers } = require('ethers');
 
 const contractAddress = '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF';
-const provider = new ethers.providers.JsonRpcProvider('https://sanko-arb-sepolia.rpc.caldera.xyz/http');
+const provider = new ethers.providers.JsonRpcProvider('https://rpc.sepolia.org');
 const wallet = new ethers.Wallet('your-private-key', provider);
 
 // Create a game
@@ -296,8 +296,8 @@ These contracts are live and can be used by anyone. The house fee is 2% for all 
 
 | Network | Address | Block Explorer |
 |---------|---------|----------------|
-| Sanko Mainnet | `0xb8f26231ab263ed6c85f2a602a383d597936164b` | [View](https://explorer.sanko.xyz/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
-| Sanko Testnet | `0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8` | [View](https://sanko-arb-sepolia.hub.caldera.xyz/address/0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8) |
+| ETH Mainnet | `0xb8f26231ab263ed6c85f2a602a383d597936164b` | [View](https://etherscan.io/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
+| Sepolia Testnet | `0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8` | [View](https://sepolia.etherscan.io/address/0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8) |
 | Ethereum Mainnet | `0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87` | [View](https://etherscan.io/address/0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87) |
 
 **Note:** Games using the global matchmaking contracts are featured on the [global leaderboard](https://pockit.gg).
@@ -313,7 +313,7 @@ Creates a new Governor instance for automated game management with event-driven 
 - **`privateKey`** *(string, required)*: Ethereum private key for signing transactions
 - **`matchMakingContractAddress`** *(string, required)*: Deployed contract address
 - **`fee`** *(number, required)*: Governor fee percentage (0-100)
-- **`providerUrl`** *(string, optional)*: RPC endpoint (default: `https://mainnet.sanko.xyz`)
+- **`providerUrl`** *(string, optional)*: RPC endpoint (default: `https://eth.llamarpc.com`)
 - **`contractABI`** *(array, optional)*: Custom ABI (default: bundled ABI)
 
 #### Event Handlers (all optional)

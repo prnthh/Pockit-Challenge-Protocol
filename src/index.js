@@ -7,7 +7,7 @@ class Governor {
         privateKey,
         matchMakingContractAddress,
         fee,
-        providerUrl = "https://mainnet.sanko.xyz",
+        providerUrl = "https://eth.llamarpc.com",
         contractABI = defaultABI,
         // Event handlers - one per contract event
         onGameCreated,

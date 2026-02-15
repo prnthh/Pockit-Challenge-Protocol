@@ -5,7 +5,7 @@ import contractABI from "../contracts/abi.js"; // Use relative path to the ABI
 
 dotenv.config();
 
-const provider = new ethers.JsonRpcProvider("https://sanko-arb-sepolia.rpc.caldera.xyz/http");
+const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
 
 async function player1MakeGame(stakeAmount) {
   const playerWallet = new ethers.Wallet(process.env.playerpkey, provider);

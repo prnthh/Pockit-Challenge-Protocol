@@ -1,512 +1,118 @@
 # Pockit Challenge Protocol
 
-A decentralized matchmaking and escrow system for blockchain-based competitive games. The protocol handles stake deposits, game governance, winner determination, and automatic prize distribution.
+N-player escrow with a declared governor. Players see the governor before joining, stake ETH, and the governor resolves the game. Winners get paid out automatically.
 
-## Table of Contents
+## How It Works
 
-- [Overview](#overview)
-- [Contract Features](#contract-features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Contract Details](#contract-details)
-- [Deployed Contracts](#deployed-contracts)
-- [API Reference](#api-reference)
+1. Someone creates a game, picking a **governor** and a **stake amount**
+2. Players see the governor address and join by matching the stake
+3. Governor calls `startGame` to lock the lobby
+4. Governor calls `resolveGame(losers[])` — contract pays out winners and governor automatically
 
-## Overview
-
-The GameEscrow contract provides a complete solution for managing competitive games with monetary stakes:
-
-- **Escrow Management**: Securely holds player stakes during games
-- **Flexible Governance**: Games can be governed by automated systems or human arbiters
-- **Winner Determination**: Governors mark losers, and the contract automatically distributes prizes to winners
-- **Fee System**: Supports both house fees and governor fees
-- **Access Control**: Optional player whitelisting for private games
-- **Forfeit Mechanism**: Players can forfeit before games start, with automatic refunds if all players forfeit
-
-## Contract Features
-
-### Core Functionality
-
-1. **Game Creation**
-   - Create games with custom stake amounts
-   - Assign a governor (can be a smart contract or EOA)
-   - Optional whitelist for private games
-   - Creator automatically joins as first player
-
-2. **Player Management**
-   - Players join by matching the stake amount
-   - Whitelist validation (if enabled)
-   - Duplicate join prevention
-   - Forfeit option before game starts
-
-3. **Game Lifecycle**
-   - **Not Started**: Waiting for players, forfeits allowed
-   - **Ready**: Governor has started the game, no new players or forfeits
-   - **Ongoing**: Game is being played/resolved
-   - **Ended**: Winners paid out, game complete
-
-4. **Prize Distribution**
-   - House fee (set at contract deployment)
-   - Governor fee (set when ending game)
-   - Remaining prize split equally among winners
-   - If no winners, governor receives all remaining funds
-
-5. **Query Functions**
-   - Get all not-started games
-   - Get all ongoing games
-   - Get games by governor (filtered by status)
-   - Get full game details
-
-## Installation
+## Install
 
 ```bash
 npm install @pockit/challenge-protocol
 ```
 
-## Quick Start
+## Usage
 
-### For Game Developers (Using the Governor Library)
+### SDK
 
 ```javascript
-import Governor from '@pockit/challenge-protocol';
+import { EscrowClient } from '@pockit/challenge-protocol';
 
-const gov = new Governor({
-  privateKey: 'your-governor-private-key',
-  matchMakingContractAddress: '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF', // Sepolia testnet
-  fee: 5, // 5% governor fee
-  providerUrl: 'https://rpc.sepolia.org', // Sepolia testnet
+const escrow = new EscrowClient({
+  privateKey: process.env.PRIVATE_KEY,
+  contractAddress: '0x...',
+});
 
-  // Event handler: Called when a player joins
+// Write ops (have retry logic)
+await escrow.createGame(stakeAmount, maxPlayers, whitelist);
+await escrow.joinGame(gameId, stakeAmount);
+await escrow.startGame(gameId);
+await escrow.resolveGame(gameId, [loserAddress], governorFeePercent);
+
+// Read ops (use getContract() for anything else)
+const game = await escrow.getGame(gameId);
+const contract = escrow.getContract();
+```
+
+### Governor (Event-Driven)
+
+For automated governors that need to react to on-chain events:
+
+```javascript
+const governor = escrow.asGovernor({
+  fee: 2, // 2% governor fee
+
   onPlayerJoined: async (gameId, game, { player }) => {
-    const activePlayers = game.players.filter(
-      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
-    );
-
-    console.log(`Player ${player} joined game ${gameId}`);
-
-    // Start game when we have enough players
-    if (activePlayers.length >= 2 && !game.isReady) {
-      await gov.setGameReady(gameId);
+    if (game.players.length === 2 && game.state === 0n) {
+      await governor.startGame(gameId);
     }
   },
 
-  // Game loop: Runs your game logic automatically when game is ready
-  gameLoop: async (gameId, game, onGameResolved) => {
-    const activePlayers = game.players.filter(
-      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
-    );
-
-    console.log(`Running game ${gameId} with ${activePlayers.length} players...`);
-
-    // Your game logic here (e.g., coin flip, rock-paper-scissors, etc.)
-    const loserIndex = Math.floor(Math.random() * activePlayers.length);
-    const loser = activePlayers[loserIndex];
-
-    // Resolve game and distribute prizes
-    await onGameResolved([loser]);
+  gameLoop: async (gameId, game, resolve) => {
+    const loser = game.players[Math.random() < 0.5 ? 0 : 1];
+    await resolve([loser]); // atomic: marks losers + pays out winners
   },
 });
 
-// Start monitoring for events - automatically recovers unresolved games on startup
-gov.start();
+governor.start(); // polls for events, recovers unresolved games on startup
 ```
 
-### For Players (Direct Contract Interaction)
+### Direct Contract (ethers/viem)
 
 ```javascript
-const { ethers } = require('ethers');
-
-const contractAddress = '0xDefE687Cb741fFd583f70E9d5C5000da0c9710dF';
-const provider = new ethers.providers.JsonRpcProvider('https://rpc.sepolia.org');
-const wallet = new ethers.Wallet('your-private-key', provider);
-
-// Create a game
-const stakeAmount = ethers.utils.parseEther('0.1'); // 0.1 DMT
-const governorAddress = '0xYourGovernorAddress'; // Or use an automated governor
-const maxPlayers = 0; // 0 for unlimited, or set a specific number
-const whitelist = []; // Empty array = public game, or add addresses for private game
-
-const tx = await contract.createGame(governorAddress, stakeAmount, maxPlayers, whitelist, {
-  value: stakeAmount
-});
-await tx.wait();
-
-// Join an existing game
-const gameId = 0; // Game ID to join
-const gameInfo = await contract.getGame(gameId);
-const joinTx = await contract.joinGame(gameId, {
-  value: gameInfo.stakeAmount
-});
-await joinTx.wait();
-
-// Forfeit a game (before it starts)
-const forfeitTx = await contract.forfeitGame(gameId);
-await forfeitTx.wait();
+await contract.createGame(governorAddress, stakeAmount, maxPlayers, whitelist, { value: stakeAmount });
+await contract.joinGame(gameId, { value: stakeAmount });
 ```
 
-## Contract Details
+## Contract
 
-### Game Struct
+### Lifecycle
 
-```solidity
-struct Game {
-    address governor;           // Who controls the game
-    uint256 stakeAmount;       // Entry fee per player
-    uint256 maxPlayers;        // Maximum players (0 = unlimited)
-    bool isReady;              // Has game started?
-    bool isEnded;              // Has game finished?
-    address[] players;         // All players
-    address[] losers;          // Players marked as losers
-    address[] whitelist;       // Allowed players (empty = public)
-    address[] forfeited;       // Players who forfeited
-}
-```
+| State | Value | Description |
+|-------|-------|-------------|
+| **Open** | 0 | Lobby open. Players join/forfeit. |
+| **Started** | 1 | Lobby locked. Game in progress. |
+| **Resolved** | 2 | Losers marked. Winners and governor paid out. |
 
-### Key Functions
+### Functions
 
-#### `createGame(address governor, uint256 stakeAmount, uint256 maxPlayers, address[] whitelist)`
-Creates a new game. Caller becomes the first player.
-
-**Parameters:**
-- `governor`: Address that will control game start/end
-- `stakeAmount`: Entry fee in wei (must match msg.value)
-- `maxPlayers`: Maximum number of players allowed (0 for unlimited)
-- `whitelist`: Array of allowed players (empty for public games)
-
-**Returns:** `uint256` - The new game ID
-
----
-
-#### `joinGame(uint256 gameId)`
-Join an existing game by matching the stake.
-
-**Requirements:**
-- Game not ended
-- Game not started (not ready)
-- Correct stake amount sent
-- Not already joined
-- On whitelist (if game is private)
-- Game not full (if maxPlayers is set)
-
----
-
-#### `forfeitGame(uint256 gameId)`
-Forfeit before game starts. If all players forfeit, everyone is refunded.
-
-**Requirements:**
-- Game not started (not ready)
-- Game not ended
-- Caller is a player
-- Haven't already forfeited
-
----
-
-#### `setGameReady(uint256 gameId)`
-Governor marks game as started. No more joins or forfeits allowed.
-
-**Requirements:**
-- Caller is governor
-- Game not ended
-- Game not already ready
-
----
-
-#### `addLoser(uint256 gameId, address loser)`
-Governor marks a player as a loser.
-
-**Requirements:**
-- Caller is governor
-- Game is ready
-- Game not ended
-- Address is a player
-- Not already marked as loser
-
----
-
-#### `endGame(uint256 gameId, uint256 governorFeePercentage)`
-Governor ends game and distributes prizes.
-
-**Parameters:**
-- `governorFeePercentage`: Fee for governor (0-100)
-
-**Prize Distribution:**
-1. House fee deducted (set at deployment)
-2. Governor fee deducted
-3. Remaining split equally among winners (players not marked as losers and who didn't forfeit)
-4. If no winners, governor receives remaining funds
-
-**Note:** Forfeited players are excluded from prize distribution even if they weren't marked as losers.
-
-**Requirements:**
-- Caller is governor
-- Game is ready
-- Game not ended
-- Total fees ≤ 100%
-
----
-
-#### `getGame(uint256 gameId)`
-Returns complete game information.
-
-**Returns:** `GameInfo` struct with all game details
-
----
-
-#### `getGovernorGames(address governor, bool includeEnded, bool includeOngoing, bool includeNotStarted)`
-Efficiently query games by governor.
-
-**Parameters:**
-- `governor`: Governor address to filter by
-- `includeEnded`: Include completed games
-- `includeOngoing`: Include ready but not ended games
-- `includeNotStarted`: Include games waiting to start
-
-**Returns:** `uint256[]` - Array of game IDs
-
----
-
-#### `getNotStartedGames()`
-Returns all games waiting to start (not ready, not ended).
-
-**Returns:** `uint256[]` - Array of game IDs
-
----
-
-#### `getOngoingGames()`
-Returns all games in progress (ready but not ended).
-
-**Returns:** `uint256[]` - Array of game IDs
-
----
+| Function | Who | What |
+|----------|-----|------|
+| `createGame(governor, stake, maxPlayers, whitelist)` | Anyone | Creates game, caller joins as first player |
+| `joinGame(gameId)` | Anyone | Match stake to join |
+| `forfeitGame(gameId)` | Player | Pre-start only, immediate refund |
+| `startGame(gameId)` | Governor | Locks lobby |
+| `resolveGame(gameId, losers[], govFee%)` | Governor | Atomic resolution + auto-payout |
+| `getGame(gameId)` | Anyone | Full game state |
 
 ### Events
 
-```solidity
-event GameCreated(uint256 indexed gameId, address creator, uint256 stakeAmount);
-event PlayerJoined(uint256 indexed gameId, address player);
-event GameReady(uint256 indexed gameId);
-event LoserAdded(uint256 indexed gameId, address loser);
-event PlayerForfeited(uint256 indexed gameId, address player);
-event GameEnded(uint256 indexed gameId);
 ```
+GameCreated(gameId, creator, stakeAmount)
+PlayerJoined(gameId, player)
+PlayerForfeited(gameId, player)
+GameStarted(gameId)
+GameResolved(gameId, winners[], losers[])
+```
+
+### Prize Distribution
+
+1. House fee → accumulated (owner withdraws separately)
+2. Governor fee → sent to governor on resolve
+3. Remainder → split equally among winners (sent on resolve)
+4. No winners → governor gets remainder
 
 ## Deployed Contracts
 
-These contracts are live and can be used by anyone. The house fee is 2% for all deployed contracts.
-
-| Network | Address | Block Explorer |
-|---------|---------|----------------|
-| ETH Mainnet | `0xb8f26231ab263ed6c85f2a602a383d597936164b` | [View](https://etherscan.io/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
-| Sepolia Testnet | `0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8` | [View](https://sepolia.etherscan.io/address/0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8) |
-| Ethereum Mainnet | `0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87` | [View](https://etherscan.io/address/0xd0cE8C6c7Ec2DB144d53ca8A4eb3Ce612F0BEA87) |
-
-**Note:** Games using the global matchmaking contracts are featured on the [global leaderboard](https://pockit.gg).
-
-## API Reference
-
-### `Governor(options)`
-
-Creates a new Governor instance for automated game management with event-driven architecture.
-
-#### Options
-
-- **`privateKey`** *(string, required)*: Ethereum private key for signing transactions
-- **`matchMakingContractAddress`** *(string, required)*: Deployed contract address
-- **`fee`** *(number, required)*: Governor fee percentage (0-100)
-- **`providerUrl`** *(string, optional)*: RPC endpoint (default: `https://eth.llamarpc.com`)
-- **`contractABI`** *(array, optional)*: Custom ABI (default: bundled ABI)
-
-#### Event Handlers (all optional)
-
-Lightweight notification callbacks for contract events:
-
-- **`onGameCreated(gameId, game, { creator, stakeAmount })`**: Game created notification
-- **`onPlayerJoined(gameId, game, { player })`**: Player joined notification
-- **`onPlayerForfeited(gameId, game, { player })`**: Player forfeited notification
-- **`onGameReady(gameId, game)`**: Game ready notification (called before gameLoop)
-- **`onLoserAdded(gameId, game, { loser })`**: Loser added notification
-- **`onGameEnded(gameId, game)`**: Game ended notification
-
-#### Game Loop Handler
-
-- **`gameLoop(gameId, game, onGameResolved)`**: Heavyweight game execution logic
-  - Only called for games where you're the governor
-  - Automatically invoked when `GameReady` event fires
-  - Provides `onGameResolved(losers)` callback for easy game resolution
-  - Runs in background (non-blocking)
-  - Automatically recovers on server restart
-
-**Example:**
-```javascript
-gameLoop: async (gameId, game, onGameResolved) => {
-  // Run your game logic here
-  const loser = determineWinner(game.players);
-
-  // Resolve when done
-  await onGameResolved([loser]);
-}
-```
-
-#### Methods
-
-- **`start(pollingIntervalMs = 10000)`**: Start event monitoring and automatic game recovery
-- **`createGame(stakeAmount, maxPlayers?, whitelist?)`**: Create a new game
-- **`joinGame(gameId, stakeAmount)`**: Join an existing game
-- **`setGameReady(gameId)`**: Mark game as ready (triggers GameReady event)
-- **`addLoser(gameId, loser)`**: Mark a player as loser
-- **`endGame(gameId, governorFee?)`**: End game and distribute prizes
-- **`resolveGame(gameId, losers)`**: Helper: calls addLoser + endGame
-- **`getGame(gameId)`**: Get full game details
-- **`getGovernorGames(...)`**: Query games by governor
-- **`getNotStartedGames(...)`**: Get games waiting to start
-- **`getBalance()`**: Get governor wallet balance
-- **`formatEther(value)`**: Format wei to ether
-- **`parseEther(value)`**: Parse ether to wei
-
-#### Architecture
-
-The Governor uses **event scanning** instead of polling:
-- ✅ No block persistence needed - contract state is source of truth
-- ✅ Automatic recovery on startup via `recoverUnresolvedGames()`
-- ✅ Idempotent event processing using on-chain state checks
-- ✅ Non-blocking game loops run in background
-
-See [API.md](./API.md) for complete reference and [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed lifecycle information.
-
-## Use Cases
-
-### 1. Simple Coinflip Game
-```javascript
-const governor = new Governor({
-  privateKey: process.env.PRIVATE_KEY,
-  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
-  fee: 2,
-
-  onPlayerJoined: async (gameId, game) => {
-    // Start when we have 2 players
-    if (game.players.length === 2 && !game.isReady) {
-      await governor.setGameReady(gameId);
-    }
-  },
-
-  gameLoop: async (gameId, game, onGameResolved) => {
-    const activePlayers = game.players.filter(
-      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
-    );
-
-    // Random coinflip
-    const loser = activePlayers[Math.random() < 0.5 ? 0 : 1];
-    await onGameResolved([loser]);
-  }
-});
-
-governor.start();
-```
-
-### 2. Auto-Join Coinflip
-```javascript
-const governor = new Governor({
-  privateKey: process.env.PRIVATE_KEY,
-  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
-  fee: 2,
-
-  // Auto-join games created by others
-  onGameCreated: async (gameId, game, { creator, stakeAmount }) => {
-    if (creator.toLowerCase() !== governor.wallet.address.toLowerCase()) {
-      await governor.joinGame(gameId, stakeAmount);
-    }
-  },
-
-  // Start when 2 players
-  onPlayerJoined: async (gameId, game) => {
-    if (game.players.length === 2 && !game.isReady) {
-      await governor.setGameReady(gameId);
-    }
-  },
-
-  // Run coinflip
-  gameLoop: async (gameId, game, onGameResolved) => {
-    const loser = game.players[Math.random() < 0.5 ? 0 : 1];
-    await onGameResolved([loser]);
-  }
-});
-
-governor.start();
-```
-
-### 3. Tournament (Last Person Standing)
-```javascript
-const governor = new Governor({
-  privateKey: process.env.PRIVATE_KEY,
-  matchMakingContractAddress: process.env.CONTRACT_ADDRESS,
-  fee: 2,
-
-  onPlayerJoined: async (gameId, game) => {
-    // Wait for 8 players
-    if (game.players.length >= 8 && !game.isReady) {
-      await governor.setGameReady(gameId);
-    }
-  },
-
-  gameLoop: async (gameId, game, onGameResolved) => {
-    const activePlayers = game.players.filter(
-      p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
-    );
-
-    // Mark all but one player as losers
-    const winnerIndex = Math.floor(Math.random() * activePlayers.length);
-    const losers = activePlayers.filter((_, i) => i !== winnerIndex);
-
-    await onGameResolved(losers);
-  }
-});
-
-governor.start();
-```
-
-### 3. Private Game with Whitelist and Max Players
-```javascript
-// Create a private game only certain players can join, with a max of 5 players
-const whitelist = [
-  '0xPlayer1Address',
-  '0xPlayer2Address',
-  '0xPlayer3Address'
-];
-const maxPlayers = 5; // Limit to 5 players
-
-await contract.createGame(governorAddress, stakeAmount, maxPlayers, whitelist, {
-  value: stakeAmount
-});
-```
-
-## Gas Optimizations
-
-The contract implements several gas optimization techniques:
-
-1. **Storage Slot Packing**: Boolean flags (`isReady`, `isEnded`) are packed with the `governor` address in a single storage slot
-2. **O(1) Lookups**: Uses mappings (`isPlayer`, `isLoser`, `isWhitelisted`, `hasForfeit`) for constant-time player checks
-3. **Calldata Usage**: Whitelist parameter uses `calldata` instead of `memory` to save gas
-4. **Unchecked Arithmetic**: Loop counters use `unchecked` blocks where overflow is impossible
-5. **Cached Array Lengths**: Array lengths are cached in local variables during loops
-
-## Security Considerations
-
-1. **ReentrancyGuard**: All state-changing functions are protected against reentrancy attacks
-2. **Governor Control**: Only the designated governor can start/end games and mark losers
-3. **Fee Validation**: Total fees (house + governor) cannot exceed 100%
-4. **Whitelist Enforcement**: Private games only allow whitelisted players
-5. **Forfeit Safety**: Automatic refunds when all players forfeit prevent locked funds
-6. **CEI Pattern**: Functions follow Checks-Effects-Interactions pattern to prevent reentrancy
-7. **Forfeit Handling**: Forfeited players are properly excluded from prize distribution
+| Network | Address |
+|---------|---------|
+| ETH Mainnet | [`0xb8f26231ab263ed6c85f2a602a383d597936164b`](https://etherscan.io/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
+| Sepolia | [`0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8`](https://sepolia.etherscan.io/address/0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8) |
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please submit pull requests or open issues on GitHub.
-
-## Support
-
-For questions or support, please visit [pockit.gg](https://pockit.gg) or open an issue on GitHub.

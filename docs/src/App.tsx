@@ -26,8 +26,7 @@ export interface GameInfo {
     stakeAmount: bigint
     maxPlayers: bigint
     activePlayers: bigint
-    isReady: boolean
-    isEnded: boolean
+    state: number  // 0 = Open, 1 = Started, 2 = Resolved
     players: string[]
     losers: string[]
     whitelist: string[]

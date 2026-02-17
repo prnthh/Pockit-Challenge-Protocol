@@ -21,32 +21,39 @@ function GameHeader({ gameId, governor, stake, currencySymbol }: {
     )
 }
 
-// Player Row with Add Loser Button
+// Player Row with toggle-loser selection
 function PlayerRow({
     player,
     game,
     walletAddress,
-    onAddLoser
+    isSelectedLoser,
+    onToggleLoser
 }: {
     player: string;
     game: Game;
     walletAddress: string;
-    onAddLoser?: (gameId: bigint, loser: string) => void
+    isSelectedLoser?: boolean;
+    onToggleLoser?: (player: string) => void
 }) {
     const playerInList = (list: string[]) => list.some(p => p.toLowerCase() === player.toLowerCase())
     const isLoser = playerInList(game.losers)
     const hasForfeited = playerInList(game.forfeited)
-    const status = isLoser ? 'loser' : hasForfeited ? 'forfeited' : ''
-    const statusText = isLoser ? ' (Loser)' : hasForfeited ? ' (Forfeited)' : ''
+    const isWinner = game.state === 2 && !isLoser && !hasForfeited
+    const status = isWinner ? 'winner' : isLoser ? 'loser' : hasForfeited ? 'forfeited' : ''
+    const statusText = isWinner ? ' (Winner)' : isLoser ? ' (Loser)' : hasForfeited ? ' (Forfeited)' : ''
 
     return (
         <div className="player-row">
             <span className={status}>
                 {player.slice(0, 6)}...{player.slice(-4)}{statusText}
             </span>
-            {game.isReady && !isLoser && !hasForfeited && onAddLoser && (
-                <button onClick={() => onAddLoser(game.id, player)} disabled={!walletAddress}>
-                    Add as Loser
+            {game.state === 1 && !isLoser && !hasForfeited && onToggleLoser && (
+                <button
+                    onClick={() => onToggleLoser(player)}
+                    disabled={!walletAddress}
+                    style={{ background: isSelectedLoser ? '#ef4444' : undefined }}
+                >
+                    {isSelectedLoser ? '✗ Unmark' : 'Mark Loser'}
                 </button>
             )}
         </div>
@@ -291,7 +298,22 @@ function GovernGamesTile({
     currencySymbol: string
     chainConfig: typeof CHAINS[ChainKey]
 }) {
-    const calculatePoolSplit = (game: Game) => {
+    const [selectedLosers, setSelectedLosers] = useState<Record<string, Set<string>>>({})
+
+    const toggleLoser = (gameId: bigint, player: string) => {
+        const key = gameId.toString()
+        setSelectedLosers(prev => {
+            const current = new Set(prev[key] || [])
+            if (current.has(player.toLowerCase())) {
+                current.delete(player.toLowerCase())
+            } else {
+                current.add(player.toLowerCase())
+            }
+            return { ...prev, [key]: current }
+        })
+    }
+
+    const calculatePoolSplit = (game: Game, loserSet: Set<string>) => {
         const totalPool = game.stakeAmount * BigInt(game.players.length)
         const governorFee = (totalPool * 5n) / 100n
 
@@ -299,7 +321,9 @@ function GovernGamesTile({
             list.some(p => p.toLowerCase() === player.toLowerCase())
 
         const winnersCount = BigInt(
-            game.players.filter(p => !isInList(p, game.losers) && !isInList(p, game.forfeited)).length
+            game.players.filter(p =>
+                !loserSet.has(p.toLowerCase()) && !isInList(p, game.forfeited)
+            ).length
         )
         const perWinnerAmount = winnersCount > 0n ? (totalPool - governorFee) / winnersCount : 0n
 
@@ -315,14 +339,14 @@ function GovernGamesTile({
         }
     }
 
-    const readyUpGame = (gameId: bigint) =>
-        executeWrite('ready up game', 'setGameReady', [gameId])
+    const doStartGame = (gameId: bigint) =>
+        executeWrite('start game', 'startGame', [gameId])
 
-    const addLoser = (gameId: bigint, loser: string) =>
-        executeWrite('add loser', 'addLoser', [gameId, loser as `0x${string}`])
-
-    const endGame = (gameId: bigint) =>
-        executeWrite('end game', 'endGame', [gameId, 5n])
+    const doResolveGame = (gameId: bigint) => {
+        const key = gameId.toString()
+        const losers = Array.from(selectedLosers[key] || []) as `0x${string}`[]
+        executeWrite('resolve game', 'resolveGame', [gameId, losers, 5n])
+    }
 
     return (
         <div className="tile">
@@ -333,10 +357,12 @@ function GovernGamesTile({
             <div className="games-list">
                 {ongoingGames.length > 0 ? (
                     ongoingGames.map((game) => {
-                        const poolSplit = calculatePoolSplit(game)
+                        const key = game.id.toString()
+                        const loserSet = selectedLosers[key] || new Set<string>()
+                        const poolSplit = calculatePoolSplit(game, loserSet)
 
                         return (
-                            <div key={game.id.toString()} className="game-card">
+                            <div key={key} className="game-card">
                                 <GameHeader
                                     gameId={game.id}
                                     governor={game.governor}
@@ -344,48 +370,52 @@ function GovernGamesTile({
                                     currencySymbol={currencySymbol}
                                 />
 
-                                <small>Ready: {game.isReady ? '✓' : '✗'}</small>
+                                <small>
+                                    {game.state === 2 ? 'Resolved ✓' : game.state === 1 ? 'In Progress ⏳' : 'Lobby Open'}
+                                </small>
 
                                 <div>
                                     <small><strong>Players: {game.players.length}</strong></small>
                                     {game.players.length > 0 ? (
                                         game.players.map((p, i) => (
-                                            <PlayerRow key={i} player={p} game={game} walletAddress={walletAddress} onAddLoser={addLoser} />
+                                            <PlayerRow
+                                                key={i}
+                                                player={p}
+                                                game={game}
+                                                walletAddress={walletAddress}
+                                                isSelectedLoser={loserSet.has(p.toLowerCase())}
+                                                onToggleLoser={(player) => toggleLoser(game.id, player)}
+                                            />
                                         ))
                                     ) : (
                                         <small>Waiting for players...</small>
                                     )}
                                 </div>
 
-                                {game.losers.length > 0 && (
-                                    <small className="loser"><strong>Current Losers: {game.losers.length}</strong></small>
-                                )}
-
-                                {game.isReady && (
+                                {game.state === 1 && (
                                     <div className="info-box">
-                                        <strong>Pool Split:</strong>
+                                        <strong>Pool Split Preview:</strong>
                                         <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
                                         <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
                                         <div>Winners: {poolSplit.winnersCount.toString()}</div>
                                         <div><strong>Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</strong></div>
+                                        <div><small>Selected losers: {loserSet.size}</small></div>
                                     </div>
                                 )}
 
-                                {game.players.length >= 1 ? (
+                                {game.players.length >= 1 && (
                                     <>
-                                        {!game.isReady && (
-                                            <button onClick={() => readyUpGame(game.id)} disabled={!walletAddress}>
-                                                Ready {game.players.length === 1 && '(1P)'}
+                                        {game.state === 0 && (
+                                            <button onClick={() => doStartGame(game.id)} disabled={!walletAddress}>
+                                                Start Game {game.players.length === 1 && '(1P)'}
                                             </button>
                                         )}
-                                        {game.isReady && (
-                                            <button onClick={() => endGame(game.id)} disabled={!walletAddress}>
-                                                Resolve Game
+                                        {game.state === 1 && (
+                                            <button onClick={() => doResolveGame(game.id)} disabled={!walletAddress || loserSet.size === 0}>
+                                                Resolve Game ({loserSet.size} losers)
                                             </button>
                                         )}
                                     </>
-                                ) : (
-                                    <small>Waiting for players</small>
                                 )}
                             </div>
                         )
@@ -415,7 +445,9 @@ function PastGamesTile({
             <div className="games-list">
                 {pastGames.length > 0 ? (
                     pastGames.map((game) => {
-                        const winners = game.players.filter(p => !game.losers.includes(p))
+                        const inList = (addr: string, list: string[]) =>
+                            list.some(p => p.toLowerCase() === addr.toLowerCase())
+                        const winners = game.players.filter(p => !inList(p, game.losers) && !inList(p, game.forfeited))
                         return (
                             <div key={game.id.toString()} className="game-card">
                                 <GameHeader
@@ -441,7 +473,7 @@ function PastGamesTile({
                                     )) : <small>No losers</small>}
                                 </div>
 
-                                <small>Status: Completed ✓</small>
+                                <small>Status: Resolved ✓</small>
                             </div>
                         )
                     })

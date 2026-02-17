@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract GameEscrow is ReentrancyGuard {
     modifier onlyGovernor(uint256 gameId) {
@@ -14,10 +14,11 @@ contract GameEscrow is ReentrancyGuard {
         _;
     }
 
+    enum State { Open, Started, Resolved }
+
     struct Game {
         address governor;           // slot 0
-        bool isReady;               // slot 0
-        bool isEnded;               // slot 0
+        State state;                // slot 0 (1 byte) — packs with governor
 
         uint256 stakeAmount;        // slot 1
         uint256 maxPlayers;         // slot 2
@@ -39,8 +40,7 @@ contract GameEscrow is ReentrancyGuard {
         uint256 stakeAmount;
         uint256 maxPlayers;
         uint256 activePlayers;
-        bool isReady;
-        bool isEnded;
+        State state;
         address[] players;
         address[] losers;
         address[] whitelist;
@@ -50,24 +50,22 @@ contract GameEscrow is ReentrancyGuard {
     mapping(uint256 => Game) public games;
     uint256 public nextGameId;
     address public owner;
-    uint256 public immutable houseFeePercentage;
+    uint256 public houseFeePercentage;
+    uint256 public accumulatedHouseFees;
 
-    constructor(uint256 _houseFeePercentage) {
+    constructor() {
         owner = msg.sender;
-        houseFeePercentage = _houseFeePercentage;
     }
 
     event GameCreated(uint256 indexed gameId, address creator, uint256 stakeAmount);
     event PlayerJoined(uint256 indexed gameId, address player);
     event PlayerForfeited(uint256 indexed gameId, address player);
-    event GameReady(uint256 indexed gameId);
-    event LoserAdded(uint256 indexed gameId, address loser);
+    event GameStarted(uint256 indexed gameId);
     event GameResolved(
         uint256 indexed gameId,
         address[] winners,
         address[] losers
     );
-    event GameEnded(uint256 indexed gameId);
 
     // --------------------------------------------------
     // Game lifecycle
@@ -114,8 +112,7 @@ contract GameEscrow is ReentrancyGuard {
         Game storage game = games[gameId];
 
         require(game.governor != address(0), "Game does not exist");
-        require(!game.isReady, "Game already started");
-        require(!game.isEnded, "Game ended");
+        require(game.state == State.Open, "Game not open");
         require(!game.isPlayer[msg.sender], "Already joined");
         require(msg.value == game.stakeAmount, "Incorrect stake");
 
@@ -141,8 +138,7 @@ contract GameEscrow is ReentrancyGuard {
     function forfeitGame(uint256 gameId) external nonReentrant {
         Game storage game = games[gameId];
 
-        require(!game.isReady, "Game already started");
-        require(!game.isEnded, "Game ended");
+        require(game.state == State.Open, "Game not open");
         require(game.isPlayer[msg.sender], "Not a player");
         require(!game.hasForfeit[msg.sender], "Already forfeited");
 
@@ -157,69 +153,53 @@ contract GameEscrow is ReentrancyGuard {
         (bool success, ) = msg.sender.call{value: game.stakeAmount}("");
         require(success, "Refund failed");
 
-        // Auto-end if no active players remain
+        // Auto-resolve if no active players remain
         if (game.activePlayers == 0) {
-            game.isEnded = true;
-            emit GameEnded(gameId);
+            game.state = State.Resolved;
         }
     }
 
     // --------------------------------------------------
-    // Game resolution
+    // Step 1: Start game (lock lobby, no more joins)
     // --------------------------------------------------
 
-    function setGameReady(uint256 gameId) external onlyGovernor(gameId) {
+    function startGame(uint256 gameId) external onlyGovernor(gameId) {
         Game storage game = games[gameId];
 
-        require(!game.isEnded, "Game ended");
-        require(!game.isReady, "Already ready");
+        require(game.state == State.Open, "Game not open");
         require(game.activePlayers > 0, "No players");
 
-        game.isReady = true;
-        emit GameReady(gameId);
+        game.state = State.Started;
+        emit GameStarted(gameId);
     }
 
-    function addLoser(uint256 gameId, address loser) external onlyGovernor(gameId) {
+    // --------------------------------------------------
+    // Step 2: Resolve game (atomic loser marking + auto-payout)
+    // --------------------------------------------------
+
+    function resolveGame(
+        uint256 gameId,
+        address[] calldata losers,
+        uint256 governorFeePercentage
+    ) external nonReentrant onlyGovernor(gameId) {
         Game storage game = games[gameId];
 
-        require(game.isReady, "Game not ready");
-        require(!game.isEnded, "Game ended");
-        require(game.isPlayer[loser], "Not a player");
-        require(!game.isLoser[loser], "Already loser");
-        require(!game.hasForfeit[loser], "Player forfeited");
-
-        game.losers.push(loser);
-        game.isLoser[loser] = true;
-
-        emit LoserAdded(gameId, loser);
-    }
-
-    function endGame(uint256 gameId, uint256 governorFeePercentage)
-        external
-        nonReentrant
-        onlyGovernor(gameId)
-    {
-        Game storage game = games[gameId];
-
-        require(game.isReady, "Game not ready");
-        require(!game.isEnded, "Game already ended");
+        require(game.state == State.Started, "Game not started");
         require(houseFeePercentage + governorFeePercentage <= 100, "Fee overflow");
 
-        game.isEnded = true;
+        // Mark all losers atomically
+        for (uint256 i; i < losers.length; ) {
+            address loser = losers[i];
+            require(game.isPlayer[loser], "Not a player");
+            require(!game.hasForfeit[loser], "Player forfeited");
+            require(!game.isLoser[loser], "Duplicate loser");
 
-        // Invariant:
-        // totalPrize == stakeAmount * activePlayers
-        uint256 totalPrize = game.stakeAmount * game.activePlayers;
-
-        uint256 houseFee = (totalPrize * houseFeePercentage) / 100;
-        uint256 governorFee = (totalPrize * governorFeePercentage) / 100;
-        uint256 remainingPrize = totalPrize - houseFee - governorFee;
-
-        if (governorFee > 0) {
-            (bool ok, ) = game.governor.call{value: governorFee}("");
-            require(ok, "Governor transfer failed");
+            game.losers.push(loser);
+            game.isLoser[loser] = true;
+            unchecked { ++i; }
         }
 
+        // Count winners
         uint256 winnerCount;
         uint256 playersLength = game.players.length;
 
@@ -231,44 +211,52 @@ contract GameEscrow is ReentrancyGuard {
             unchecked { ++i; }
         }
 
-        if (winnerCount == 0) {
+        // Compute prize pool
+        uint256 totalPrize = game.stakeAmount * game.activePlayers;
+        uint256 houseFee = (totalPrize * houseFeePercentage) / 100;
+        uint256 governorFee = (totalPrize * governorFeePercentage) / 100;
+        uint256 remainingPrize = totalPrize - houseFee - governorFee;
+
+        // Record house fee (owner withdraws separately)
+        accumulatedHouseFees += houseFee;
+
+        game.state = State.Resolved;
+
+        // Pay governor fee
+        if (governorFee > 0) {
+            (bool ok, ) = game.governor.call{value: governorFee}("");
+            require(ok, "Governor transfer failed");
+        }
+
+        // Build winners array + pay out in one pass
+        address[] memory winners = new address[](winnerCount);
+        uint256 wi;
+
+        if (winnerCount > 0) {
+            uint256 prizePerWinner = remainingPrize / winnerCount;
+            uint256 dust = remainingPrize - (prizePerWinner * winnerCount);
+
+            for (uint256 i; i < playersLength; ) {
+                address p = game.players[i];
+                if (!game.isLoser[p] && !game.hasForfeit[p]) {
+                    winners[wi] = p;
+                    uint256 payout = prizePerWinner;
+                    if (wi == 0) payout += dust; // first winner gets dust
+                    (bool ok, ) = p.call{value: payout}("");
+                    require(ok, "Payout failed");
+                    unchecked { ++wi; }
+                }
+                unchecked { ++i; }
+            }
+        } else {
+            // No winners: governor gets remainder
             if (remainingPrize > 0) {
                 (bool ok, ) = game.governor.call{value: remainingPrize}("");
                 require(ok, "Remainder transfer failed");
             }
-        } else {
-            uint256 prizePerWinner = remainingPrize / winnerCount;
-            for (uint256 i; i < playersLength; ) {
-                address p = game.players[i];
-                if (!game.isLoser[p] && !game.hasForfeit[p]) {
-                    (bool ok, ) = p.call{value: prizePerWinner}("");
-                    require(ok, "Payout failed");
-                }
-                unchecked { ++i; }
-            }
         }
 
-        // Build winners and losers arrays for event emission
-        address[] memory winners = new address[](winnerCount);
-        address[] memory losers = new address[](game.losers.length);
-        
-        uint256 winnerIndex = 0;
-        for (uint256 i; i < playersLength; ) {
-            address p = game.players[i];
-            if (!game.isLoser[p] && !game.hasForfeit[p]) {
-                winners[winnerIndex] = p;
-                unchecked { ++winnerIndex; }
-            }
-            unchecked { ++i; }
-        }
-        
-        for (uint256 i; i < game.losers.length; ) {
-            losers[i] = game.losers[i];
-            unchecked { ++i; }
-        }
-
-        emit GameResolved(gameId, winners, losers);
-        emit GameEnded(gameId);
+        emit GameResolved(gameId, winners, game.losers);
     }
 
     // --------------------------------------------------
@@ -282,8 +270,7 @@ contract GameEscrow is ReentrancyGuard {
             stakeAmount: game.stakeAmount,
             maxPlayers: game.maxPlayers,
             activePlayers: game.activePlayers,
-            isReady: game.isReady,
-            isEnded: game.isEnded,
+            state: game.state,
             players: game.players,
             losers: game.losers,
             whitelist: game.whitelist,
@@ -299,7 +286,7 @@ contract GameEscrow is ReentrancyGuard {
         uint256 count = 0;
 
         for (uint256 i = offset; i < nextGameId && count < limit; i++) {
-            if (!games[i].isReady && !games[i].isEnded) {
+            if (games[i].state == State.Open) {
                 temp[count] = i;
                 count++;
             }
@@ -321,7 +308,7 @@ contract GameEscrow is ReentrancyGuard {
         uint256 count = 0;
 
         for (uint256 i = offset; i < nextGameId && count < limit; i++) {
-            if (games[i].isReady && !games[i].isEnded) {
+            if (games[i].state == State.Started) {
                 temp[count] = i;
                 count++;
             }
@@ -337,7 +324,7 @@ contract GameEscrow is ReentrancyGuard {
 
     function getGovernorGames(
         address governor,
-        bool includeEnded,
+        bool includeResolved,
         bool includeOngoing,
         bool includeNotStarted,
         uint256 offset,
@@ -351,11 +338,12 @@ contract GameEscrow is ReentrancyGuard {
 
             bool shouldInclude = false;
 
-            if (games[i].isEnded && includeEnded) {
+            State s = games[i].state;
+            if (s == State.Resolved && includeResolved) {
                 shouldInclude = true;
-            } else if (games[i].isReady && !games[i].isEnded && includeOngoing) {
+            } else if (s == State.Started && includeOngoing) {
                 shouldInclude = true;
-            } else if (!games[i].isReady && !games[i].isEnded && includeNotStarted) {
+            } else if (s == State.Open && includeNotStarted) {
                 shouldInclude = true;
             }
 
@@ -378,9 +366,15 @@ contract GameEscrow is ReentrancyGuard {
     // --------------------------------------------------
 
     function withdraw() external onlyOwner {
-        uint256 amount = address(this).balance;
-        require(amount > 0, "No funds");
+        uint256 amount = accumulatedHouseFees;
+        require(amount > 0, "No fees to withdraw");
+        accumulatedHouseFees = 0;
         (bool success, ) = owner.call{value: amount}("");
         require(success, "Withdraw failed");
+    }
+
+    function setHouseFee(uint256 _houseFeePercentage) external onlyOwner {
+        require(_houseFeePercentage <= 100, "Fee too high");
+        houseFeePercentage = _houseFeePercentage;
     }
 }

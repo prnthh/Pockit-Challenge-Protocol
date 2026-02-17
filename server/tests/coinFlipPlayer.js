@@ -1,7 +1,7 @@
 // server/tests/coinFlipPlayer.js
 import { ethers } from "ethers";
 import dotenv from "dotenv";
-import contractABI from "../contracts/abi.js"; // Use relative path to the ABI
+import contractABI from "../../contracts/abi.js";
 
 dotenv.config();
 
@@ -14,13 +14,17 @@ async function player1MakeGame(stakeAmount) {
 
   const contract = new ethers.Contract(process.env.matchmakingContractAddress, contractABI, playerWallet);
 
-  const createTx = await contract.createGame("0xdBec3DC802a817EEE74a7077f734654384857E9d", stakeAmount, {
-    value: stakeAmount,
-  });
+  const createTx = await contract.createGame(
+    "0xdBec3DC802a817EEE74a7077f734654384857E9d",
+    stakeAmount,
+    2,   // maxPlayers
+    [],  // whitelist
+    { value: stakeAmount }
+  );
   const receipt = await createTx.wait();
   const gameId = receipt.logs[0].topics[1];
   return gameId;
 }
 
-const stakeAmount = ethers.parseEther("0.01"); // Example stake amount
+const stakeAmount = ethers.parseEther("0.01");
 player1MakeGame(stakeAmount).catch(console.error);

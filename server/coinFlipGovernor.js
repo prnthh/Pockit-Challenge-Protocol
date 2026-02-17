@@ -1,41 +1,43 @@
 // server/coinFlipGovernor.js
-import Governor from "@pockit/challenge-protocol";
+import { EscrowClient } from "@pockit/challenge-protocol";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const coinGovernor = new Governor({
+const escrow = new EscrowClient({
   privateKey: process.env.governorPrivateKey,
-  matchMakingContractAddress: process.env.matchmakingContractAddress,
-  fee: 2,
+  contractAddress: process.env.matchmakingContractAddress,
   providerUrl: process.env.PROVIDER_URL || "https://eth.llamarpc.com",
+});
+
+const governor = escrow.asGovernor({
+  fee: 2,
 
   // Event handler: When a player creates a game, governor auto-joins as opponent
   onGameCreated: async (gameId, game, { creator, stakeAmount }) => {
-    console.log(`[Game ${gameId}] Created by ${creator} with stake ${coinGovernor.formatEther(stakeAmount)}`);
+    console.log(`[Game ${gameId}] Created by ${creator} with stake ${escrow.formatEther(stakeAmount)}`);
 
     // Don't join our own games
-    if (creator.toLowerCase() === coinGovernor.wallet.address.toLowerCase()) {
+    if (creator.toLowerCase() === escrow.wallet.address.toLowerCase()) {
       return;
     }
 
     console.log(`[Game ${gameId}] Auto-joining as opponent...`);
-    await coinGovernor.joinGame(gameId, stakeAmount);
+    await escrow.joinGame(gameId, stakeAmount);
   },
 
-  // Event handler: Start game when we have 2 players (creator + governor)
+  // Event handler: Start game when we have 2 players
   onPlayerJoined: async (gameId, game, { player }) => {
     console.log(`[Game ${gameId}] Player ${player.slice(0, 6)}... joined (${game.players.length} total players)`);
 
-    // Start when we have 2 players
-    if (game.players.length === 2 && !game.isReady) {
+    if (game.players.length === 2 && game.state === 0n) {
       console.log(`[Game ${gameId}] Starting coin flip`);
-      await coinGovernor.setGameReady(gameId);
+      await governor.startGame(gameId);
     }
   },
 
-  // Game loop: Runs the coin flip and resolves
-  gameLoop: async (gameId, game, onGameResolved) => {
+  // Game loop: Runs the coin flip and resolves atomically
+  gameLoop: async (gameId, game, resolve) => {
     const activePlayers = game.players.filter(
       p => !game.forfeited.some(f => f.toLowerCase() === p.toLowerCase())
     );
@@ -49,10 +51,10 @@ const coinGovernor = new Governor({
 
     console.log(`[Game ${gameId}] Result - Winner: ${winner.slice(0, 6)}..., Loser: ${loser.slice(0, 6)}...`);
 
-    // Resolve the game (calls addLoser + endGame)
-    await onGameResolved([loser]);
+    // Atomic resolve: single tx marks losers + computes claimable balances
+    await resolve([loser]);
   },
 });
 
-// Start monitoring for events - automatically recovers unresolved games on startup
-coinGovernor.start();
+// Start monitoring for events — automatically recovers unresolved games on startup
+governor.start();

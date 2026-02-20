@@ -1,9 +1,9 @@
-import './App.css'
 import { useState, useEffect } from 'react'
 import { createPublicClient, createWalletClient, http, formatEther, custom } from 'viem'
 import { mainnet, sepolia } from 'viem/chains'
 import contractABI from './challengeAbi'
 import SinglePage from './components/SinglePage'
+import CoinFlipGame from './components/CoinFlipGame'
 
 // Chain configurations
 export const CHAINS = {
@@ -97,6 +97,7 @@ export const writeToContract = async (
         functionName: functionName as any,
         args: args as any,
         value: value as bigint,
+        gas: 500_000n,
         chain: null,
     } as any)
 }
@@ -105,6 +106,7 @@ function App() {
     const [selectedChain, setSelectedChain] = useState<ChainKey>('sepolia')
     const [walletAddress, setWalletAddress] = useState<string>('')
     const [balance, setBalance] = useState<string>('')
+    const [activePage, setActivePage] = useState<'dashboard' | 'coinflip'>('dashboard')
 
     // Get current chain configuration
     const CHAIN_CONFIG = CHAINS[selectedChain]
@@ -175,50 +177,51 @@ function App() {
     }, [selectedChain])
 
     return (
-        <div className="app-container">
-            <header className="app-header">
-                <h1>Pockit Challenge Protocol</h1>
+        <div className="max-w-5xl mx-auto px-4 py-6">
+            <header className="text-center mb-6">
+                <h1 className="font-heading text-4xl md:text-5xl text-ink tracking-tight leading-tight">
+                    Pockit Challenge Protocol
+                </h1>
 
-                <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 50 }}>
+                <div className="fixed top-4 right-4 z-50">
                     <select
                         value={selectedChain}
                         onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', border: '2px solid #c8c0b0', background: '#fefcf7', color: '#2d2d44', cursor: 'pointer', borderRadius: '50px', fontWeight: 700, fontFamily: "'Nunito', sans-serif" }}
+                        className="px-3 py-1.5 text-xs font-bold font-body border-3 border-ink bg-card text-ink rounded-full cursor-pointer hover:bg-yellow transition-colors"
                     >
                         <option value="mainnet">Ethereum Mainnet</option>
                         <option value="sepolia">Sepolia Testnet</option>
                     </select>
                 </div>
 
-                <div className="wallet-info">
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <a href="https://github.com/prnthh/Pockit-Challenge-Protocol/" target="_blank" rel="noopener noreferrer">
+                <div className="flex flex-wrap items-center justify-center gap-4 mt-3">
+                    <div className="flex gap-3">
+                        <a href="https://github.com/prnthh/Pockit-Challenge-Protocol/" target="_blank" rel="noopener noreferrer"
+                            className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
                             GitHub
                         </a>
-
                         {CHAIN_CONFIG.faucetUrl && (
-                            <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer"
+                                className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
                                 Get {viemChain.nativeCurrency.symbol}
                             </a>
                         )}
-
-                        <a
-                            href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
+                        <a href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
+                            target="_blank" rel="noopener noreferrer"
+                            className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
                             Open in Remix
                         </a>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <button className="connect-button" onClick={connectWallet}>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={connectWallet}
+                            className="px-4 py-2 bg-pink text-white font-bold rounded-full border-3 border-ink shadow-[3px_3px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all cursor-pointer text-sm"
+                        >
                             {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}
                         </button>
-
                         <div
-                            className="balance"
                             onClick={() => walletAddress && updateBalance(walletAddress)}
-                            style={{ cursor: walletAddress ? 'pointer' : 'default' }}
+                            className={`px-3 py-1.5 bg-card border-3 border-ink rounded-full text-sm font-bold shadow-[2px_2px_0_var(--color-ink)] ${walletAddress ? 'cursor-pointer hover:bg-yellow transition-colors' : ''}`}
                         >
                             {balance}
                         </div>
@@ -226,10 +229,32 @@ function App() {
                 </div>
             </header>
 
-            <SinglePage
-                walletAddress={walletAddress}
-                chainConfig={CHAIN_CONFIG}
-            />
+            <nav className="flex justify-center gap-2 mb-6">
+                <button
+                    onClick={() => setActivePage('dashboard')}
+                    className={`px-5 py-2.5 font-bold rounded-full border-3 border-ink text-sm transition-all cursor-pointer ${activePage === 'dashboard'
+                            ? 'bg-orange text-ink shadow-[3px_3px_0_var(--color-ink)]'
+                            : 'bg-card text-ink shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[3px_3px_0_var(--color-ink)]'
+                        }`}
+                >
+                    📋 Dashboard
+                </button>
+                <button
+                    onClick={() => setActivePage('coinflip')}
+                    className={`px-5 py-2.5 font-bold rounded-full border-3 border-ink text-sm transition-all cursor-pointer ${activePage === 'coinflip'
+                            ? 'bg-cyan text-ink shadow-[3px_3px_0_var(--color-ink)]'
+                            : 'bg-card text-ink shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[3px_3px_0_var(--color-ink)]'
+                        }`}
+                >
+                    🪙 Coin Flip
+                </button>
+            </nav>
+
+            {activePage === 'dashboard' ? (
+                <SinglePage walletAddress={walletAddress} chainConfig={CHAIN_CONFIG} />
+            ) : (
+                <CoinFlipGame walletAddress={walletAddress} chainConfig={CHAIN_CONFIG} />
+            )}
         </div>
     )
 }

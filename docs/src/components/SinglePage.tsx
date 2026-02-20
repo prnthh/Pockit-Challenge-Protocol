@@ -13,10 +13,10 @@ function GameHeader({ gameId, governor, stake, currencySymbol }: {
     currencySymbol: string
 }) {
     return (
-        <div className="game-header">
-            <div className="game-id">Game #{gameId.toString()}</div>
-            <small>Governor: {governor.slice(0, 6)}...{governor.slice(-4)}</small>
-            <div className="game-stake">Stake: {formatEther(stake)} {currencySymbol}</div>
+        <div className="mb-2">
+            <div className="font-heading text-lg text-ink">Game #{gameId.toString()}</div>
+            <small className="text-muted text-xs">Governor: {governor.slice(0, 6)}...{governor.slice(-4)}</small>
+            <div className="text-sm font-bold text-orange mt-0.5">Stake: {formatEther(stake)} {currencySymbol}</div>
         </div>
     )
 }
@@ -39,19 +39,22 @@ function PlayerRow({
     const isLoser = playerInList(game.losers)
     const hasForfeited = playerInList(game.forfeited)
     const isWinner = game.state === 2 && !isLoser && !hasForfeited
-    const status = isWinner ? 'winner' : isLoser ? 'loser' : hasForfeited ? 'forfeited' : ''
+    const statusClass = isWinner ? 'text-lime font-bold' : isLoser ? 'text-red font-bold' : hasForfeited ? 'text-muted line-through' : ''
     const statusText = isWinner ? ' (Winner)' : isLoser ? ' (Loser)' : hasForfeited ? ' (Forfeited)' : ''
 
     return (
-        <div className="player-row">
-            <span className={status}>
+        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg odd:bg-cream/50">
+            <span className={`text-sm ${statusClass}`}>
                 {player.slice(0, 6)}...{player.slice(-4)}{statusText}
             </span>
             {game.state === 1 && !isLoser && !hasForfeited && onToggleLoser && (
                 <button
                     onClick={() => onToggleLoser(player)}
                     disabled={!walletAddress}
-                    style={{ background: isSelectedLoser ? '#ef5350' : undefined, color: isSelectedLoser ? 'white' : undefined, borderColor: isSelectedLoser ? '#e53935' : undefined }}
+                    className={`px-3 py-1 text-xs font-bold rounded-full border-2 border-ink cursor-pointer transition-all ${isSelectedLoser
+                            ? 'bg-red text-white border-red'
+                            : 'bg-card text-ink hover:bg-pink hover:text-white'
+                        }`}
                 >
                     {isSelectedLoser ? '✗ Unmark' : 'Mark Loser'}
                 </button>
@@ -107,11 +110,11 @@ function CreateGameTile({
     }
 
     return (
-        <div className="tile">
-            <h2>Create a Game</h2>
+        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-4">Create a Game</h2>
 
-            <div className="form-group">
-                <label htmlFor="governor-input">Governor Address:</label>
+            <div className="mb-4">
+                <label htmlFor="governor-input" className="block text-sm font-bold mb-1">Governor Address:</label>
                 <input
                     type="text"
                     id="governor-input"
@@ -119,28 +122,29 @@ function CreateGameTile({
                     value={governorAddress}
                     onChange={(e) => setGovernorAddress(e.target.value)}
                     disabled={!walletAddress}
+                    className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
                 />
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div className="flex gap-2 mt-2">
                     <button
                         onClick={() => handlePrefillSelect('player')}
                         disabled={!walletAddress}
-                        style={{ flex: 1 }}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                     >
                         My Address
                     </button>
                     <button
                         onClick={() => handlePrefillSelect('coinflip')}
                         disabled={!walletAddress}
-                        style={{ flex: 1 }}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                     >
                         Coinflip Governor
                     </button>
                 </div>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="amount-input">Amount ({currencySymbol}):</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="mb-4">
+                <label htmlFor="amount-input" className="block text-sm font-bold mb-1">Amount ({currencySymbol}):</label>
+                <div className="flex gap-2">
                     <input
                         type="text"
                         id="amount-input"
@@ -148,55 +152,66 @@ function CreateGameTile({
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         disabled={!walletAddress}
+                        className="flex-1 px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
                     />
                     <button
-                        onClick={() => setAmount((prev) => {
-                            const current = parseFloat(prev) || 0;
-                            return (current + 0.1).toFixed(1);
-                        })}
+                        onClick={() => setAmount((prev) => { const c = parseFloat(prev) || 0; return (c + 0.1).toFixed(1) })}
                         disabled={!walletAddress}
+                        className="px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-lime transition-all cursor-pointer disabled:opacity-50"
                     >
                         +0.1
                     </button>
                     <button
-                        onClick={() => setAmount((prev) => {
-                            const current = parseFloat(prev) || 0;
-                            return (current + 1).toString();
-                        })}
+                        onClick={() => setAmount((prev) => { const c = parseFloat(prev) || 0; return (c + 1).toString() })}
                         disabled={!walletAddress}
+                        className="px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-lime transition-all cursor-pointer disabled:opacity-50"
                     >
                         +1
                     </button>
                 </div>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="max-players-input">Max Players (Optional):</label>
-                <input
-                    type="text"
-                    id="max-players-input"
-                    placeholder="Leave empty for unlimited"
-                    value={maxPlayers}
-                    onChange={(e) => setMaxPlayers(e.target.value)}
-                    disabled={!walletAddress}
-                />
-                <small>Maximum number of players. Leave empty for unlimited.</small>
+            <div className="mb-4">
+                <label htmlFor="whitelist-input" className="block text-sm font-bold mb-1">Whitelist (Optional):</label>
+                <div className="flex gap-2 items-center">
+                    <input
+                        type="text"
+                        id="whitelist-input"
+                        placeholder="0xAddr1, 0xAddr2, ... (empty = public)"
+                        value={whitelistInput}
+                        onChange={(e) => setWhitelistInput(e.target.value)}
+                        disabled={!walletAddress}
+                        className="flex-1 px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
+                    />
+                    <div className="flex items-center shrink-0">
+                        <button
+                            onClick={() => setMaxPlayers((prev) => { const c = parseInt(prev) || 0; return c > 0 ? (c - 1).toString() : '0' })}
+                            disabled={!walletAddress}
+                            className="px-2 py-2 text-sm font-bold bg-card border-2 border-ink rounded-l-lg cursor-pointer hover:bg-yellow transition-colors disabled:opacity-50"
+                        >−</button>
+                        <input
+                            type="text"
+                            id="max-players-input"
+                            placeholder="∞"
+                            value={maxPlayers}
+                            onChange={(e) => setMaxPlayers(e.target.value.replace(/[^0-9]/g, ''))}
+                            disabled={!walletAddress}
+                            title="Max Players (0 or empty = unlimited)"
+                            className="w-9 text-center py-2 text-sm border-y-2 border-ink bg-cream font-bold disabled:opacity-50 focus:outline-none"
+                        />
+                        <button
+                            onClick={() => setMaxPlayers((prev) => { const c = parseInt(prev) || 0; return (c + 1).toString() })}
+                            disabled={!walletAddress}
+                            className="px-2 py-2 text-sm font-bold bg-card border-2 border-ink rounded-r-lg cursor-pointer hover:bg-yellow transition-colors disabled:opacity-50"
+                        >+</button>
+                    </div>
+                </div>
+                <small className="text-muted text-xs mt-1 block">Comma-separated addresses for private games. Max players: {maxPlayers || '∞'}</small>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="whitelist-input">Whitelist (Optional):</label>
-                <input
-                    type="text"
-                    id="whitelist-input"
-                    placeholder="0xAddress1, 0xAddress2, ... (leave empty for public)"
-                    value={whitelistInput}
-                    onChange={(e) => setWhitelistInput(e.target.value)}
-                    disabled={!walletAddress}
-                />
-                <small>Comma-separated addresses for private games. Leave empty for public games.</small>
-            </div>
-
-            <button className="primary-button" onClick={createGame} disabled={!walletAddress}>
+            <button onClick={createGame} disabled={!walletAddress}
+                className="w-full py-2.5 bg-pink text-white font-bold rounded-full border-3 border-ink shadow-[4px_4px_0_var(--color-ink)] hover:shadow-[2px_2px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
                 Create Game
             </button>
         </div>
@@ -231,10 +246,10 @@ function JoinGameTile({
         executeWrite('forfeit game', 'forfeitGame', [gameId])
 
     return (
-        <div className="tile">
-            <h2>Join a Game</h2>
+        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-4">Join a Game</h2>
 
-            <div className="games-list">
+            <div className="space-y-3">
                 {openGames.length > 0 ? (
                     openGames.map((game) => {
                         const addressInList = (list: string[] | undefined) =>
@@ -246,32 +261,32 @@ function JoinGameTile({
                         const isFull = game.maxPlayers > 0n && game.players?.length >= Number(game.maxPlayers)
 
                         return (
-                            <div key={game.id.toString()} className="game-card">
-                                <GameHeader
-                                    gameId={game.id}
-                                    governor={game.governor}
-                                    stake={game.stakeAmount}
-                                    currencySymbol={currencySymbol}
-                                />
+                            <div key={game.id.toString()} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                                <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
-                                <small>
+                                <small className="block text-xs text-muted">
                                     Players: {game.players?.length || 0}
                                     {game.maxPlayers > 0n && ` / ${game.maxPlayers.toString()}`}
                                     {(game.forfeited?.length || 0) > 0 && ` (${game.forfeited.length} forfeited)`}
                                 </small>
-                                {(game.whitelist?.length || 0) > 0 && <small>🔒 Private ({game.whitelist.length} whitelisted)</small>}
-                                {isFull && <small>🚫 Game Full</small>}
+                                {(game.whitelist?.length || 0) > 0 && <small className="block text-xs text-muted">🔒 Private ({game.whitelist.length} whitelisted)</small>}
+                                {isFull && <small className="block text-xs text-red font-bold">🚫 Game Full</small>}
 
                                 {!isPlayerInGame ? (
                                     <button
                                         onClick={() => joinGame(game.id, game.stakeAmount)}
                                         disabled={!walletAddress || !isWhitelisted || isFull}
                                         title={isFull ? 'Game is full' : (!isWhitelisted ? 'You are not whitelisted for this game' : '')}
+                                        className="mt-2 w-full py-2 text-sm font-bold bg-lime border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isFull ? '🚫 Full' : (isWhitelisted ? 'Join' : '🔒 Not Whitelisted')}
                                     </button>
                                 ) : (
-                                    <button onClick={() => forfeitGame(game.id)} disabled={!walletAddress || !!hasForfeited}>
+                                    <button
+                                        onClick={() => forfeitGame(game.id)}
+                                        disabled={!walletAddress || !!hasForfeited}
+                                        className="mt-2 w-full py-2 text-sm font-bold bg-red text-white border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                    >
                                         {hasForfeited ? 'Forfeited' : 'Forfeit'}
                                     </button>
                                 )}
@@ -279,7 +294,7 @@ function JoinGameTile({
                         )
                     })
                 ) : (
-                    <p className="no-games">No open games available.</p>
+                    <p className="text-center text-muted text-sm py-6">No open games available.</p>
                 )}
             </div>
         </div>
@@ -349,12 +364,11 @@ function GovernGamesTile({
     }
 
     return (
-        <div className="tile">
-            <h2>Govern Games</h2>
+        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-1">Govern Games</h2>
+            <p className="text-sm text-muted mb-4">Manage games where you are the governor (5% fee).</p>
 
-            <p className="section-title">Manage games where you are the governor (5% fee).</p>
-
-            <div className="games-list">
+            <div className="space-y-3">
                 {ongoingGames.length > 0 ? (
                     ongoingGames.map((game) => {
                         const key = game.id.toString()
@@ -362,20 +376,15 @@ function GovernGamesTile({
                         const poolSplit = calculatePoolSplit(game, loserSet)
 
                         return (
-                            <div key={key} className="game-card">
-                                <GameHeader
-                                    gameId={game.id}
-                                    governor={game.governor}
-                                    stake={game.stakeAmount}
-                                    currencySymbol={currencySymbol}
-                                />
+                            <div key={key} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                                <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
-                                <small>
-                                    {game.state === 2 ? 'Resolved ✓' : game.state === 1 ? 'In Progress ⏳' : 'Lobby Open'}
+                                <small className="block text-xs font-bold mb-2">
+                                    {game.state === 2 ? '✓ Resolved' : game.state === 1 ? '⏳ In Progress' : '🟢 Lobby Open'}
                                 </small>
 
-                                <div>
-                                    <small><strong>Players: {game.players.length}</strong></small>
+                                <div className="mb-2">
+                                    <small className="font-bold text-xs">Players: {game.players.length}</small>
                                     {game.players.length > 0 ? (
                                         game.players.map((p, i) => (
                                             <PlayerRow
@@ -388,31 +397,35 @@ function GovernGamesTile({
                                             />
                                         ))
                                     ) : (
-                                        <small>Waiting for players...</small>
+                                        <small className="text-muted text-xs block">Waiting for players...</small>
                                     )}
                                 </div>
 
                                 {game.state === 1 && (
-                                    <div className="info-box">
-                                        <strong>Pool Split Preview:</strong>
+                                    <div className="bg-purple/15 border-2 border-purple rounded-xl p-3 text-xs space-y-0.5 mb-3">
+                                        <strong className="text-sm">Pool Split Preview:</strong>
                                         <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
                                         <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
                                         <div>Winners: {poolSplit.winnersCount.toString()}</div>
-                                        <div><strong>Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</strong></div>
-                                        <div><small>Selected losers: {loserSet.size}</small></div>
+                                        <div className="font-bold">Each: {formatEther(poolSplit.perWinnerAmount)} {currencySymbol}</div>
+                                        <div className="text-muted">Selected losers: {loserSet.size}</div>
                                     </div>
                                 )}
 
                                 {game.players.length >= 1 && (
                                     <>
                                         {game.state === 0 && (
-                                            <button onClick={() => doStartGame(game.id)} disabled={!walletAddress}>
+                                            <button onClick={() => doStartGame(game.id)} disabled={!walletAddress}
+                                                className="w-full py-2 text-sm font-bold bg-cyan border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                            >
                                                 Start Game {game.players.length === 1 && '(1P)'}
                                             </button>
                                         )}
                                         {game.state === 1 && (
-                                            <button onClick={() => doResolveGame(game.id)} disabled={!walletAddress || loserSet.size === 0}>
-                                                Resolve Game ({loserSet.size} losers)
+                                            <button onClick={() => doResolveGame(game.id)} disabled={!walletAddress || (game.players.length > 1 && loserSet.size === 0)}
+                                                className="w-full py-2 text-sm font-bold bg-orange border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                            >
+                                                {game.players.length === 1 ? 'Resolve Game (1P Win)' : `Resolve Game (${loserSet.size} losers)`}
                                             </button>
                                         )}
                                     </>
@@ -421,7 +434,7 @@ function GovernGamesTile({
                         )
                     })
                 ) : (
-                    <p className="no-games">No games to govern.</p>
+                    <p className="text-center text-muted text-sm py-6">No games to govern.</p>
                 )}
             </div>
         </div>
@@ -437,48 +450,42 @@ function PastGamesTile({
     currencySymbol: string
 }) {
     return (
-        <div className="tile">
-            <h2>Past Games History</h2>
+        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-1">Past Games History</h2>
+            <p className="text-sm text-muted mb-4">View completed games where you were the governor.</p>
 
-            <p className="section-title">View completed games where you were the governor.</p>
-
-            <div className="games-list">
+            <div className="space-y-3">
                 {pastGames.length > 0 ? (
                     pastGames.map((game) => {
                         const inList = (addr: string, list: string[]) =>
                             list.some(p => p.toLowerCase() === addr.toLowerCase())
                         const winners = game.players.filter(p => !inList(p, game.losers) && !inList(p, game.forfeited))
                         return (
-                            <div key={game.id.toString()} className="game-card">
-                                <GameHeader
-                                    gameId={game.id}
-                                    governor={game.governor}
-                                    stake={game.stakeAmount}
-                                    currencySymbol={currencySymbol}
-                                />
+                            <div key={game.id.toString()} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                                <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
-                                <small>Players: {game.players.length}</small>
+                                <small className="block text-xs text-muted mb-2">Players: {game.players.length}</small>
 
-                                <div>
-                                    <small><strong>Winners ({winners.length}):</strong></small>
+                                <div className="mb-1">
+                                    <small className="font-bold text-xs text-lime">Winners ({winners.length}):</small>
                                     {winners.length > 0 ? winners.map((p, i) => (
-                                        <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
-                                    )) : <small>No winners</small>}
+                                        <small key={i} className="block text-xs ml-2">{p.slice(0, 6)}...{p.slice(-4)}</small>
+                                    )) : <small className="block text-xs text-muted ml-2">No winners</small>}
                                 </div>
 
-                                <div>
-                                    <small className="loser"><strong>Losers ({game.losers.length}):</strong></small>
+                                <div className="mb-1">
+                                    <small className="font-bold text-xs text-red">Losers ({game.losers.length}):</small>
                                     {game.losers.length > 0 ? game.losers.map((p, i) => (
-                                        <small key={i}>{p.slice(0, 6)}...{p.slice(-4)}</small>
-                                    )) : <small>No losers</small>}
+                                        <small key={i} className="block text-xs ml-2">{p.slice(0, 6)}...{p.slice(-4)}</small>
+                                    )) : <small className="block text-xs text-muted ml-2">No losers</small>}
                                 </div>
 
-                                <small>Status: Resolved ✓</small>
+                                <small className="block text-xs font-bold text-lime">Status: Resolved ✓</small>
                             </div>
                         )
                     })
                 ) : (
-                    <p className="no-games">No past games found.</p>
+                    <p className="text-center text-muted text-sm py-6">No past games found.</p>
                 )}
             </div>
         </div>
@@ -598,7 +605,7 @@ function SinglePage({
     }, [client, chainConfig.contractAddress])
 
     return (
-        <div className="tiles-container">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CreateGameTile
                 walletAddress={walletAddress}
                 currencySymbol={chainConfig.chain.nativeCurrency.symbol}

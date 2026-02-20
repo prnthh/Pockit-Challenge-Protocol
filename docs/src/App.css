@@ -333,3 +333,519 @@ button:disabled {
 .remix-button:hover {
   transform: translateY(-2px);
 }
+
+/* ============================================
+   Page Tabs
+   ============================================ */
+.page-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-tab {
+  padding: 0.5rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border-radius: 50px;
+  cursor: pointer;
+  background: #f0ece3;
+  color: #5a5a7a;
+  border: 3px solid #d0ccc3;
+  box-shadow: 0 2px 0 #b8b4ab;
+  font-family: 'Nunito', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+
+.page-tab:hover:not(.active) {
+  background: #e8e4db;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 #b8b4ab;
+}
+
+.page-tab.active {
+  background: #ffd54f;
+  color: #5d4037;
+  border-color: #ffca28;
+  box-shadow: 0 3px 0 #f9a825;
+}
+
+/* ============================================
+   Coin Flip Page
+   ============================================ */
+.coinflip-page {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.coinflip-container {
+  background: #ffffff;
+  border: 3px solid #2d2d44;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 6px 6px 0 #2d2d44;
+  text-align: center;
+}
+
+.coinflip-title {
+  font-size: 1.8rem;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #2d2d44;
+  margin: 0 0 0.25rem 0;
+}
+
+.coinflip-subtitle {
+  color: #7a7a9a;
+  font-size: 0.85rem;
+  margin: 0 0 1.5rem 0;
+}
+
+/* Stake section */
+.coinflip-stake {
+  text-align: left;
+}
+
+.coinflip-stake label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #5a5a7a;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.coinflip-stake-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+.coinflip-chip {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  border-radius: 50px;
+  background: #f0ece3;
+  color: #5a5a7a;
+  border: 2px solid #d0ccc3;
+  box-shadow: 0 2px 0 #b8b4ab;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.coinflip-chip.active {
+  background: #ffd54f;
+  color: #5d4037;
+  border-color: #ffca28;
+  box-shadow: 0 2px 0 #f9a825;
+}
+
+.coinflip-chip:hover:not(.active) {
+  background: #e8e4db;
+}
+
+.coinflip-custom-input {
+  width: 70px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  border: 2px solid #c8c0b0;
+  background: #fefcf7;
+  color: #2d2d44;
+  font-size: 0.8rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  text-align: center;
+}
+
+.coinflip-custom-input:focus {
+  outline: none;
+  border-color: #ffd54f;
+  box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.3);
+}
+
+.coinflip-pick-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #5a5a7a;
+  margin: 0 0 0.6rem 0;
+  text-align: center;
+}
+
+.coinflip-call-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.coinflip-call-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.2rem 2rem;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: 16px;
+  cursor: pointer;
+  border: 3px solid;
+  transition: all 0.15s;
+  font-family: 'Nunito', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 120px;
+}
+
+.coinflip-call-btn .coin-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.coinflip-call-btn.heads {
+  background: #fff8e1;
+  color: #f57f17;
+  border-color: #ffd54f;
+  box-shadow: 0 4px 0 #f9a825;
+}
+
+.coinflip-call-btn.heads:hover:not(:disabled) {
+  background: #fff3cd;
+  box-shadow: 0 6px 0 #f9a825;
+}
+
+.coinflip-call-btn.tails {
+  background: #e8eaf6;
+  color: #283593;
+  border-color: #7986cb;
+  box-shadow: 0 4px 0 #3f51b5;
+}
+
+.coinflip-call-btn.tails:hover:not(:disabled) {
+  background: #dde0f5;
+  box-shadow: 0 6px 0 #3f51b5;
+}
+
+.coinflip-call-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Staking / waiting phase */
+.coinflip-staking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 2rem 0;
+}
+
+.coinflip-spinner {
+  font-size: 3rem;
+  animation: cf-spin 1s linear infinite;
+}
+
+.coinflip-status {
+  font-weight: 700;
+  color: #2d2d44;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Flipping arena */
+.coinflip-arena {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+/* Score display */
+.coinflip-score {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.score-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  border-radius: 12px;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  min-width: 80px;
+  transition: all 0.3s;
+}
+
+.score-side.leading {
+  background: #e8f5e9;
+  border-color: #81c784;
+}
+
+.score-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #7a7a9a;
+  letter-spacing: 0.5px;
+}
+
+.score-num {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #2d2d44;
+  line-height: 1;
+}
+
+.score-vs {
+  font-weight: 800;
+  color: #c8c0b0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+/* Coin animation area */
+.coinflip-coin-area {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 600px;
+}
+
+.coin-3d {
+  font-size: 5rem;
+  line-height: 1;
+  transform-style: preserve-3d;
+}
+
+.coin-face {
+  backface-visibility: hidden;
+}
+
+.coin-landed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.coin-result-emoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.coin-result-text {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #2d2d44;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.round-verdict {
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.2rem 0.8rem;
+  border-radius: 50px;
+  margin-top: 0.3rem;
+}
+
+.round-verdict.win {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 2px solid #81c784;
+}
+
+.round-verdict.lose {
+  background: #ffebee;
+  color: #c62828;
+  border: 2px solid #ef9a9a;
+}
+
+/* Round dots */
+.coinflip-rounds {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.round-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+
+.round-dot.pending {
+  background: #f0ece3;
+  color: #b8b4ab;
+  border: 2px solid #d0ccc3;
+}
+
+.round-dot.active {
+  background: #fff3cd;
+  color: #f57f17;
+  border: 2px solid #ffd54f;
+  animation: pulse-dot 0.6s ease-in-out infinite alternate;
+}
+
+.round-dot.won {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 2px solid #81c784;
+}
+
+.round-dot.lost {
+  background: #ffebee;
+  color: #c62828;
+  border: 2px solid #ef9a9a;
+}
+
+@keyframes pulse-dot {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
+
+/* Final result overlay */
+.coinflip-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 3px solid;
+  width: 100%;
+}
+
+.coinflip-final.won {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+}
+
+.coinflip-final.lost {
+  background: #ffebee;
+  border-color: #ef5350;
+}
+
+.final-emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.final-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+}
+
+.coinflip-final.won .final-text {
+  color: #2e7d32;
+}
+
+.coinflip-final.lost .final-text {
+  color: #c62828;
+}
+
+.final-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #5a5a7a;
+}
+
+.final-status {
+  font-size: 0.75rem;
+  color: #7a7a9a;
+}
+
+.final-gameid {
+  font-size: 0.7rem;
+  color: #b8b4ab;
+}
+
+.coinflip-play-again {
+  margin-top: 0.8rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  background: #ffd54f;
+  color: #5d4037;
+  border-color: #ffca28;
+  box-shadow: 0 3px 0 #f9a825;
+  border-radius: 50px;
+}
+
+.coinflip-play-again:hover:not(:disabled) {
+  background: #ffcd38;
+  box-shadow: 0 5px 0 #f9a825;
+}
+
+/* ============================================
+   Pure CSS Animations (no framer-motion)
+   ============================================ */
+
+/* Fade in */
+.cf-fade-in {
+  animation: cf-fade-in 0.35s ease-out both;
+}
+
+@keyframes cf-fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Pop in (scale bounce) */
+.cf-pop-in {
+  animation: cf-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes cf-pop-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Pop in with delay for round verdict */
+.cf-pop-in-delay {
+  animation: cf-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+/* Spinner rotation */
+@keyframes cf-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Coin flip animation */
+.coin-flipping {
+  animation: cf-coin-toss 1.6s ease-in-out both;
+}
+
+@keyframes cf-coin-toss {
+  0%   { transform: rotateX(0deg)   translateY(0);     }
+  30%  { transform: rotateX(900deg)  translateY(-120px); }
+  50%  { transform: rotateX(1400deg) translateY(-140px); }
+  75%  { transform: rotateX(1600deg) translateY(-60px);  }
+  100% { transform: rotateX(1800deg) translateY(0);      }
+}
+
+/* Hover bounce for call buttons */
+.coinflip-call-btn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.04);
+}
+
+.coinflip-call-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}

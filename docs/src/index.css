@@ -1,52 +1,81 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
 
-:root {
-  font-family: 'Nunito', 'Comic Sans MS', 'Chalkboard SE', system-ui, sans-serif;
-  line-height: 1.5;
-  font-weight: 600;
+@theme {
+  --font-heading: 'Fredoka One', 'Comic Sans MS', cursive;
+  --font-body: 'Nunito', 'Comic Sans MS', 'Chalkboard SE', system-ui, sans-serif;
 
-  color-scheme: light;
-  color: #2d2d44;
-  background-color: #fdf6e3;
+  --color-cream: #fdf6e3;
+  --color-ink: #2d2d44;
+  --color-pink: #e85d75;
+  --color-pink-dark: #c74b63;
+  --color-orange: #ffb74d;
+  --color-cyan: #4dd0e1;
+  --color-lime: #aed581;
+  --color-purple: #ce93d8;
+  --color-yellow: #fff176;
+  --color-red: #ef5350;
+  --color-card: #fffdf7;
+  --color-border: #2d2d44;
+  --color-muted: #8e8e9a;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-pop-in: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-spin-coin: spin-coin 0.4s linear infinite;
+  --animate-coin-toss: coin-toss 1.8s ease-in-out;
+  --animate-pulse-dot: pulse-dot 1.2s ease-in-out infinite;
+  --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-* {
-  box-sizing: border-box;
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-a {
-  font-weight: 700;
-  color: #e85d75;
-  text-decoration: none;
-}
-a:hover {
-  color: #c74b63;
-  text-decoration: underline wavy;
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: #fdf6e3;
-  background-image:
-    radial-gradient(circle at 10% 20%, rgba(255, 183, 77, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 90% 80%, rgba(129, 212, 250, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(206, 147, 216, 0.1) 0%, transparent 50%);
+@keyframes spin-coin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
 }
 
-#root {
-  width: 100%;
+@keyframes coin-toss {
+  0% { transform: translateY(0) rotateY(0deg); }
+  50% { transform: translateY(-80px) rotateY(900deg); }
+  100% { transform: translateY(0) rotateY(1800deg); }
 }
 
-h1 {
-  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  font-size: 2.2em;
-  line-height: 1.1;
-  color: #2d2d44;
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+@keyframes bounce-in {
+  from { opacity: 0; transform: scale(0.3) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--color-ink);
+    background: var(--color-cream);
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(255, 183, 77, 0.18) 0%, transparent 50%),
+      radial-gradient(circle at 90% 80%, rgba(77, 208, 225, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(206, 147, 216, 0.12) 0%, transparent 50%);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root { width: 100%; }
 }

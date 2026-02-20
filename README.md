@@ -88,6 +88,9 @@ await contract.joinGame(gameId, { value: stakeAmount });
 | `startGame(gameId)` | Governor | Locks lobby |
 | `resolveGame(gameId, losers[], govFee%)` | Governor | Atomic resolution + auto-payout |
 | `getGame(gameId)` | Anyone | Full game state |
+| `getGames(governor, inclResolved, inclOngoing, inclOpen, offset, limit)` | Anyone | Filtered game list (pass `address(0)` for all governors) |
+| `setHouseFee(percentage)` | Owner | Set house fee (default 0) |
+| `withdraw()` | Owner | Withdraw accumulated house fees |
 
 ### Events
 

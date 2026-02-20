@@ -223,7 +223,7 @@ class Governor {
 
         try {
             const contract = this.escrow.getContract();
-            const gameIds = await contract.getGovernorGames(this.escrow.wallet.address, false, true, false, 0n, 100n);
+            const gameIds = await contract.getGames(this.escrow.wallet.address, false, true, false, 0n, 100n);
             console.log(`[Governor] Found ${gameIds.length} ongoing games`);
 
             for (const gameId of gameIds) {

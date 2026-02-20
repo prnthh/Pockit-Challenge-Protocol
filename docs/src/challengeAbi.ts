@@ -171,7 +171,7 @@ const contractABI = [
   },
   {
     "type": "function",
-    "name": "getGovernorGames",
+    "name": "getGames",
     "inputs": [
       {
         "name": "governor",
@@ -193,54 +193,6 @@ const contractABI = [
         "type": "bool",
         "internalType": "bool"
       },
-      {
-        "name": "offset",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getNotStartedGames",
-    "inputs": [
-      {
-        "name": "offset",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getOngoingGames",
-    "inputs": [
       {
         "name": "offset",
         "type": "uint256",

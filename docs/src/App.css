@@ -1,63 +1,80 @@
 .app-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .app-header {
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .app-header h1 {
-  margin-bottom: 0.75rem;
-  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #2d2d44;
+  letter-spacing: 0.5px;
 }
 
 .wallet-info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
 
 .connect-button {
-  padding: 0.4rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border-radius: 0;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border-radius: 50px;
   cursor: pointer;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: #ff6b6b;
   color: white;
-  border: none;
-  transition: transform 0.2s;
+  border: 3px solid #e55a5a;
+  transition: all 0.15s;
+  box-shadow: 0 3px 0 #c94444;
+  font-family: 'Nunito', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .connect-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 5px 0 #c94444;
+}
+
+.connect-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #c94444;
 }
 
 .wallet-address {
   font-size: 0.75rem;
-  opacity: 0.8;
+  opacity: 0.7;
   margin: 0;
+  color: #5a5a7a;
 }
 
 .balance {
   font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.3rem 0.6rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 0;
+  font-weight: 800;
+  padding: 0.35rem 0.8rem;
+  background: #fff3cd;
+  border: 3px solid #ffc107;
+  border-radius: 50px;
+  color: #856404;
+  box-shadow: 0 2px 0 #d4a106;
 }
 
 .tiles-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  max-width: 900px;
+  max-width: 940px;
   margin: 1rem auto 0;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 @media (min-width: 769px) {
@@ -67,24 +84,34 @@
 }
 
 .tile {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0;
-  padding: 0.75rem;
+  background: #ffffff;
+  border: 3px solid #2d2d44;
+  border-radius: 16px;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   min-height: 300px;
+  box-shadow: 4px 4px 0 #2d2d44;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.tile:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #2d2d44;
 }
 
 .tile h2 {
   margin-top: 0;
   margin-bottom: 0.75rem;
-  font-size: 1.1rem;
-  color: #fff;
+  font-size: 1.15rem;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #2d2d44;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px dashed #e0d8c8;
 }
 
 .form-group {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -93,63 +120,102 @@
 
 .form-group label {
   margin-bottom: 0.25rem;
-  font-weight: 500;
+  font-weight: 700;
   font-size: 0.85rem;
+  color: #5a5a7a;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 0.4rem;
-  border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 2px solid #c8c0b0;
+  background: #fefcf7;
+  color: #2d2d44;
   font-size: 0.85rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #81d4fa;
+  box-shadow: 0 0 0 3px rgba(129, 212, 250, 0.3);
 }
 
 .form-group input:disabled,
 .form-group select:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  background: #f0ece3;
 }
 
 .form-group small {
   opacity: 0.6;
   font-size: 0.7rem;
+  color: #7a7a9a;
 }
 
 small {
   font-size: 0.7rem;
   display: block;
+  color: #5a5a7a;
 }
 
 /* Unified button styles */
 button {
-  padding: 0.3rem 0.8rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 0;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  border-radius: 50px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s;
+  background: #81d4fa;
+  color: #1a5276;
+  border: 2px solid #4fc3f7;
+  transition: all 0.15s;
   white-space: nowrap;
+  box-shadow: 0 2px 0 #29b6f6;
+  font-family: 'Nunito', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 #29b6f6;
+  background: #6dc9f5;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0px 0 #29b6f6;
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
+  background: #d0ccc3;
+  border-color: #b8b4ab;
+  color: #8a8a8a;
+  box-shadow: none;
 }
 
 .primary-button {
   margin-top: auto;
+  background: #a5d6a7;
+  color: #1b5e20;
+  border-color: #81c784;
+  box-shadow: 0 3px 0 #66bb6a;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: #8fce91;
+  box-shadow: 0 5px 0 #66bb6a;
 }
 
 .games-list {
@@ -161,13 +227,18 @@ button:disabled {
 }
 
 .game-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0;
-  padding: 0.5rem;
+  background: #fefcf7;
+  border: 2px solid #e0d8c8;
+  border-radius: 12px;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  transition: border-color 0.2s;
+}
+
+.game-card:hover {
+  border-color: #c8c0b0;
 }
 
 .game-header {
@@ -175,19 +246,26 @@ button:disabled {
   flex-direction: column;
   gap: 0.2rem;
   padding-bottom: 0.3rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px dashed #e8e0d0;
 }
 
 .game-id {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #3b82f6;
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  color: #e85d75;
 }
 
 .game-stake {
-  font-weight: 600;
-  color: #4ade80;
-  font-size: 0.75rem;
+  font-weight: 800;
+  color: #2e7d32;
+  font-size: 0.78rem;
+  background: #e8f5e9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 50px;
+  display: inline-block;
+  width: fit-content;
+  border: 1px solid #c8e6c9;
 }
 
 .player-row {
@@ -199,19 +277,28 @@ button:disabled {
 }
 
 .loser {
-  color: #f87171;
+  color: #e53935;
+  font-weight: 700;
+}
+
+.winner {
+  color: #2e7d32;
+  font-weight: 700;
 }
 
 .forfeited {
-  color: #9ca3af;
+  color: #9e9e9e;
+  text-decoration: line-through;
 }
 
 .info-box {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   margin-top: 0.4rem;
-  padding: 0.3rem;
-  background: rgba(100, 200, 255, 0.1);
-  border: 1px solid rgba(100, 200, 255, 0.3);
+  padding: 0.5rem;
+  background: #e3f2fd;
+  border: 2px solid #90caf9;
+  border-radius: 10px;
+  color: #1565c0;
 }
 
 .section-header {
@@ -223,26 +310,26 @@ button:disabled {
 
 .section-title {
   margin: 0;
-  opacity: 0.8;
+  opacity: 0.7;
   font-size: 0.8rem;
+  color: #7a7a9a;
 }
 
 .no-games {
   text-align: center;
-  opacity: 0.6;
-  padding: 1rem;
-  font-size: 0.85rem;
+  opacity: 0.5;
+  padding: 1.5rem;
+  font-size: 0.9rem;
+  color: #7a7a9a;
+  font-style: italic;
 }
 
 .remix-button {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  
 }
 
 .remix-button:hover {
   transform: translateY(-2px);
-  color: white;
 }
-

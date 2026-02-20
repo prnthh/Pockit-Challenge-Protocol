@@ -183,7 +183,7 @@ function App() {
                     <select
                         value={selectedChain}
                         onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', border: '1px solid #3b82f6', background: '#1a1a1a', color: 'white', cursor: 'pointer' }}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', border: '2px solid #c8c0b0', background: '#fefcf7', color: '#2d2d44', cursor: 'pointer', borderRadius: '50px', fontWeight: 700, fontFamily: "'Nunito', sans-serif" }}
                     >
                         <option value="mainnet">Ethereum Mainnet</option>
                         <option value="sepolia">Sepolia Testnet</option>

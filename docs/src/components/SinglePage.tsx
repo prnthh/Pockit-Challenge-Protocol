@@ -51,7 +51,7 @@ function PlayerRow({
                 <button
                     onClick={() => onToggleLoser(player)}
                     disabled={!walletAddress}
-                    style={{ background: isSelectedLoser ? '#ef4444' : undefined }}
+                    style={{ background: isSelectedLoser ? '#ef5350' : undefined, color: isSelectedLoser ? 'white' : undefined, borderColor: isSelectedLoser ? '#e53935' : undefined }}
                 >
                     {isSelectedLoser ? '✗ Unmark' : 'Mark Loser'}
                 </button>
@@ -535,9 +535,9 @@ function SinglePage({
             const startGame = nextGameId > PAGE_SIZE ? nextGameId - PAGE_SIZE : 0n
 
             const [openGamesData, ongoingGamesData, pastGamesData] = await Promise.all([
-                fetchGames('getNotStartedGames', [startGame, PAGE_SIZE]),
-                walletAddress ? fetchGames('getGovernorGames', [walletAddress as `0x${string}`, false, true, true, 0n, PAGE_SIZE]) : Promise.resolve([]),
-                walletAddress ? fetchGames('getGovernorGames', [walletAddress as `0x${string}`, true, false, false, 0n, PAGE_SIZE]) : Promise.resolve([])
+                fetchGames('getGames', ['0x0000000000000000000000000000000000000000', false, false, true, startGame, PAGE_SIZE]),
+                walletAddress ? fetchGames('getGames', [walletAddress as `0x${string}`, false, true, true, 0n, PAGE_SIZE]) : Promise.resolve([]),
+                walletAddress ? fetchGames('getGames', [walletAddress as `0x${string}`, true, false, false, 0n, PAGE_SIZE]) : Promise.resolve([])
             ])
 
             setOpenGames(openGamesData)

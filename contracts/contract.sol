@@ -278,51 +278,7 @@ contract GameEscrow is ReentrancyGuard {
         });
     }
 
-    function getNotStartedGames(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (uint256[] memory) {
-        uint256[] memory temp = new uint256[](limit);
-        uint256 count = 0;
-
-        for (uint256 i = offset; i < nextGameId && count < limit; i++) {
-            if (games[i].state == State.Open) {
-                temp[count] = i;
-                count++;
-            }
-        }
-
-        uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            result[i] = temp[i];
-        }
-
-        return result;
-    }
-
-    function getOngoingGames(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (uint256[] memory) {
-        uint256[] memory temp = new uint256[](limit);
-        uint256 count = 0;
-
-        for (uint256 i = offset; i < nextGameId && count < limit; i++) {
-            if (games[i].state == State.Started) {
-                temp[count] = i;
-                count++;
-            }
-        }
-
-        uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            result[i] = temp[i];
-        }
-
-        return result;
-    }
-
-    function getGovernorGames(
+    function getGames(
         address governor,
         bool includeResolved,
         bool includeOngoing,
@@ -332,20 +288,16 @@ contract GameEscrow is ReentrancyGuard {
     ) external view returns (uint256[] memory) {
         uint256[] memory temp = new uint256[](limit);
         uint256 count = 0;
+        bool filterByGovernor = governor != address(0);
 
         for (uint256 i = offset; i < nextGameId && count < limit; i++) {
-            if (games[i].governor != governor) continue;
-
-            bool shouldInclude = false;
+            if (filterByGovernor && games[i].governor != governor) continue;
 
             State s = games[i].state;
-            if (s == State.Resolved && includeResolved) {
-                shouldInclude = true;
-            } else if (s == State.Started && includeOngoing) {
-                shouldInclude = true;
-            } else if (s == State.Open && includeNotStarted) {
-                shouldInclude = true;
-            }
+            bool shouldInclude =
+                (s == State.Open && includeNotStarted) ||
+                (s == State.Started && includeOngoing) ||
+                (s == State.Resolved && includeResolved);
 
             if (shouldInclude) {
                 temp[count] = i;

@@ -129,7 +129,8 @@
             const notStartedGames = await client.readContract({
                 address: contractAddress,
                 abi: contractABI,
-                functionName: 'getNotStartedGames',
+                functionName: 'getGames',
+                args: ['0x0000000000000000000000000000000000000000', false, false, true, 0n, 100n],
             })
 
             openGamesDisplay.innerHTML = ''

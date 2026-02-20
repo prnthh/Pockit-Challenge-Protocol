@@ -9,12 +9,12 @@ import SinglePage from './components/SinglePage'
 export const CHAINS = {
     mainnet: {
         chain: mainnet,
-        contractAddress: '0xb8f26231ab263ed6c85f2a602a383d597936164b',
+        contractAddress: '0xcbeb8fbbc2ca9afb908381f24ec4cea493b9482c',
         faucetUrl: undefined,
     },
     sepolia: {
         chain: sepolia,
-        contractAddress: '0xB587Be5607CEDdDc6049E7Ad5EcF6523916A0868',
+        contractAddress: '0xA84Ba779A4Caeb2f5Cee0aE83e9f8D28298F1977',
         faucetUrl: 'https://sepoliafaucet.com/',
     },
 } as const

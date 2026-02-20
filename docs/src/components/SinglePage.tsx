@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { parseEther, formatEther, createPublicClient, http } from 'viem'
+import { parseEther, formatEther, createPublicClient, http, getAddress } from 'viem'
 import { CHAINS, writeToContract, contractABI } from '../App'
 import type { ChainKey, Game, GameInfo } from '../App'
 
@@ -533,16 +533,23 @@ function SinglePage({
         try {
             const nextGameId = await readContract<bigint>('nextGameId')
             const startGame = nextGameId > PAGE_SIZE ? nextGameId - PAGE_SIZE : 0n
+            const normalizedAddress = walletAddress ? getAddress(walletAddress) as `0x${string}` : null
 
-            const [openGamesData, ongoingGamesData, pastGamesData] = await Promise.all([
-                fetchGames('getGames', ['0x0000000000000000000000000000000000000000', false, false, true, startGame, PAGE_SIZE]),
-                walletAddress ? fetchGames('getGames', [walletAddress as `0x${string}`, false, true, true, 0n, PAGE_SIZE]) : Promise.resolve([]),
-                walletAddress ? fetchGames('getGames', [walletAddress as `0x${string}`, true, false, false, 0n, PAGE_SIZE]) : Promise.resolve([])
-            ])
-
+            // Fetch all open games (no governor filter)
+            const openGamesData = await fetchGames('getGames', ['0x0000000000000000000000000000000000000000', false, false, true, startGame, PAGE_SIZE])
             setOpenGames(openGamesData)
-            setOngoingGames(ongoingGamesData)
-            setPastGames(pastGamesData)
+
+            if (normalizedAddress) {
+                const [governorGamesData, pastGamesData] = await Promise.all([
+                    fetchGames('getGames', [normalizedAddress, false, true, true, 0n, PAGE_SIZE]),
+                    fetchGames('getGames', [normalizedAddress, true, false, false, 0n, PAGE_SIZE])
+                ])
+                setOngoingGames(governorGamesData)
+                setPastGames(pastGamesData)
+            } else {
+                setOngoingGames([])
+                setPastGames([])
+            }
         } catch (err) {
             console.error('Error loading games:', err)
         }

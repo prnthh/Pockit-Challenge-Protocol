@@ -113,8 +113,8 @@ GameResolved(gameId, winners[], losers[])
 
 | Network | Address |
 |---------|---------|
-| ETH Mainnet | [`0xb8f26231ab263ed6c85f2a602a383d597936164b`](https://etherscan.io/address/0xb8f26231ab263ed6c85f2a602a383d597936164b) |
-| Sepolia | [`0xB587Be5607CEDdDc6049E7Ad5EcF6523916A0868`](https://sepolia.etherscan.io/address/0xB587Be5607CEDdDc6049E7Ad5EcF6523916A0868) |
+| ETH Mainnet | [`0xcbeb8fbbc2ca9afb908381f24ec4cea493b9482c`](https://etherscan.io/address/0xcbeb8fbbc2ca9afb908381f24ec4cea493b9482c) |
+| Sepolia | [`0xA84Ba779A4Caeb2f5Cee0aE83e9f8D28298F1977`](https://sepolia.etherscan.io/address/0xA84Ba779A4Caeb2f5Cee0aE83e9f8D28298F1977) |
 
 ## License
 

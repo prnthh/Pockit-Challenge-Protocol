@@ -1,10 +1,10 @@
 # Pockit Challenge Protocol
 
-N-player escrow with a declared governor. Players see the governor before joining, stake ETH, and the governor resolves the game. Winners get paid out automatically.
+N-player escrow with a declared governor. Players see the governor before joining, stake ETH, and the governor resolves the game. Winners get paid out automatically. **Free games** (stake = 0) are also supported for cases where no money is at play.
 
 ## How It Works
 
-1. Someone creates a game, picking a **governor** and a **stake amount**
+1. Someone creates a game, picking a **governor** and a **stake amount** (can be `0` for free games)
 2. Players see the governor address and join by matching the stake
 3. Governor calls `startGame` to lock the lobby
 4. Governor calls `resolveGame(losers[])` — contract pays out winners and governor automatically
@@ -45,12 +45,15 @@ const stop = escrow.watchGames({ state: 'open', interval: 5000 }, (games) => {
 });
 stop(); // cancel polling
 
+// Free game (no stake)
+await escrow.createGame(0n, 4); // 0 stake, up to 4 players
+
 // Owner ops
 await escrow.setHouseFee(5);   // 5%
 await escrow.withdraw();
 
 // Raw contract access for anything else
-const contract = escrow.getContract();
+const contract = escrow.contract;
 ```
 
 ### Governor (Event-Driven)
@@ -59,10 +62,11 @@ For automated governors that need to react to on-chain events:
 
 ```javascript
 const governor = escrow.asGovernor({
-  fee: 2, // 2% governor fee
+  fee: 2, // 2% governor fee (Number, 0–100)
 
+  // gameId is always a BigInt; game.state is a Number (0 = Open, 1 = Started, 2 = Resolved)
   onPlayerJoined: async (gameId, game, { player }) => {
-    if (game.players.length === 2 && game.state === 0n) {
+    if (game.players.length === 2 && game.state === 0) {
       await governor.startGame(gameId);
     }
   },
@@ -97,15 +101,30 @@ await contract.joinGame(gameId, { value: stakeAmount });
 
 | Function | Who | What |
 |----------|-----|------|
-| `createGame(governor, stake, maxPlayers, whitelist)` | Anyone | Creates game, caller joins as first player |
+| `createGame(governor, stake, maxPlayers, whitelist)` | Anyone | Creates game, caller joins as first player. Stake can be `0` for free games. |
 | `joinGame(gameId)` | Anyone | Match stake to join |
-| `forfeitGame(gameId)` | Player | Pre-start only, immediate refund |
+| `forfeitGame(gameId)` | Player | Pre-start only, immediate refund (no-op transfer for free games) |
 | `startGame(gameId)` | Governor | Locks lobby |
 | `resolveGame(gameId, losers[], govFee%)` | Governor | Atomic resolution + auto-payout |
-| `getGame(gameId)` | Anyone | Full game state |
+| `getGame(gameId)` | Anyone | Full game state (normalized by SDK, see types below) |
 | `getGames(governor, inclResolved, inclOngoing, inclOpen, offset, limit)` | Anyone | Filtered game list (pass `address(0)` for all governors) |
 | `setHouseFee(percentage)` | Owner | Set house fee (default 0) |
 | `withdraw()` | Owner | Withdraw accumulated house fees |
+
+### SDK Types
+
+The SDK normalizes raw contract return values into plain JS objects:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `gameId` | `BigInt` | Passed to all callbacks |
+| `game.state` | `Number` | `0` = Open, `1` = Started, `2` = Resolved |
+| `game.stakeAmount` | `BigInt` | Wei — `0n` for free games |
+| `game.maxPlayers` | `Number` | `0` = unlimited |
+| `game.activePlayers` | `Number` | |
+| `game.governor` | `string` | Address |
+| `game.players` | `string[]` | |
+| `fee` (Governor) | `Number` | Governor fee percentage, 0–100 |
 
 ### Events
 
@@ -123,6 +142,7 @@ GameResolved(gameId, winners[], losers[])
 2. Governor fee → sent to governor on resolve
 3. Remainder → split equally among winners (sent on resolve)
 4. No winners → governor gets remainder
+5. Free games (stake = 0) → all fees and payouts are `0`, no ETH transfers occur
 
 ## Deployed Contracts
 

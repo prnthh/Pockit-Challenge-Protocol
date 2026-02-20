@@ -12,268 +12,116 @@ class EscrowClient {
         if (!privateKey) throw new Error("Private key is required");
         this.provider = new ethers.JsonRpcProvider(providerUrl);
         this.wallet = new ethers.Wallet(privateKey, this.provider);
-        this.contractAddress = contractAddress;
-        this.contractABI = contractABI;
-        this.contract = null;
+        this.contract = new ethers.Contract(contractAddress, contractABI, this.wallet);
     }
 
-    getContract() {
-        if (!this.contract) {
-            if (!this.contractAddress) throw new Error("Contract address is not defined");
-            this.contract = new ethers.Contract(this.contractAddress, this.contractABI, this.wallet);
-        }
-        return this.contract;
-    }
-
-    async retryTx(txFunction, maxRetries = 3, delayMs = 2000) {
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                const tx = await txFunction();
-                return await tx.wait();
-            } catch (error) {
-                // Don't retry deterministic failures
-                if (error.code === 'CALL_EXCEPTION' || error.code === 'INVALID_ARGUMENT') throw error;
-                if (attempt === maxRetries - 1) throw error;
-                console.error(`Tx attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
-                await new Promise((r) => setTimeout(r, delayMs));
+    async _tx(fn, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try { return await (await fn()).wait(); }
+            catch (e) {
+                if (e.code === 'CALL_EXCEPTION' || e.code === 'INVALID_ARGUMENT' || i === retries - 1) throw e;
+                await new Promise(r => setTimeout(r, 2000));
             }
         }
     }
 
-    // ── Write ops ──
+    // ── Write ──
+    createGame(stakeAmount, maxPlayers = 0, whitelist = []) {
+        return this._tx(() => this.contract.createGame(this.wallet.address, stakeAmount, maxPlayers, whitelist, { value: stakeAmount }));
+    }
+    joinGame(gameId, stakeAmount)          { return this._tx(() => this.contract.joinGame(gameId, { value: stakeAmount })); }
+    startGame(gameId)                      { return this._tx(() => this.contract.startGame(gameId)); }
+    resolveGame(gameId, losers, fee = 0)   { return this._tx(() => this.contract.resolveGame(gameId, losers, fee)); }
+    setHouseFee(pct)                       { return this._tx(() => this.contract.setHouseFee(pct)); }
+    withdraw()                             { return this._tx(() => this.contract.withdraw()); }
 
-    async createGame(stakeAmount, maxPlayers = 100, whitelist = []) {
-        const contract = this.getContract();
-        return await this.retryTx(() =>
-            contract.createGame(this.wallet.address, stakeAmount, maxPlayers, whitelist, { value: stakeAmount })
-        );
+    // ── Read ──
+    getGame(gameId) { return this.contract.getGame(gameId); }
+    getBalance()    { return this.provider.getBalance(this.wallet.address); }
+
+    async getGames({ governor = ethers.ZeroAddress, state = 'all', offset = 0n, limit = 50n } = {}) {
+        const inc = s => state === 'all' || state === s;
+        const ids = await this.contract.getGames(governor, inc('resolved'), inc('started'), inc('open'), offset, limit);
+        return Promise.all(ids.map(async id => ({ id, ...await this.contract.getGame(id) })));
     }
 
-    async joinGame(gameId, stakeAmount) {
-        const contract = this.getContract();
-        return await this.retryTx(() => contract.joinGame(gameId, { value: stakeAmount }));
+    watchGames({ interval = 10000, ...query } = {}, callback) {
+        let last = null, stopped = false;
+        const poll = async () => {
+            const games = await this.getGames(query).catch(() => null);
+            if (games) {
+                const json = JSON.stringify(games, (_, v) => typeof v === 'bigint' ? v.toString() : v);
+                if (json !== last) { last = json; callback(games); }
+            }
+            if (!stopped) setTimeout(poll, interval);
+        };
+        poll();
+        return () => { stopped = true; };
     }
 
-    async startGame(gameId) {
-        const contract = this.getContract();
-        return await this.retryTx(() => contract.startGame(gameId));
-    }
-
-    async resolveGame(gameId, losers, governorFee) {
-        const contract = this.getContract();
-        return await this.retryTx(() => contract.resolveGame(gameId, losers, governorFee));
-    }
-
-    // ── Read ops ──
-
-    async getGame(gameId) {
-        return await this.getContract().getGame(gameId);
-    }
-
-    async getBalance() {
-        return await this.provider.getBalance(this.wallet.address);
-    }
-
-    // ── Declarative governor helper ──
-
-    asGovernor({ fee = 0, gameLoop, onGameCreated, onPlayerJoined, onPlayerForfeited, onGameStarted, onGameResolved } = {}) {
-        return new Governor({
-            escrow: this,
-            fee,
-            gameLoop,
-            onGameCreated,
-            onPlayerJoined,
-            onPlayerForfeited,
-            onGameStarted,
-            onGameResolved,
-        });
-    }
-
-    // ── Helpers ──
-
-    formatEther(value) { return ethers.formatEther(value); }
-    parseEther(value) { return ethers.parseEther(value); }
+    asGovernor(opts) { return new Governor(this, opts); }
 }
 
 class Governor {
-    constructor({ escrow, fee = 0, gameLoop, onGameCreated, onPlayerJoined, onPlayerForfeited, onGameStarted, onGameResolved }) {
+    constructor(escrow, { fee = 0, gameLoop, onGameCreated, onPlayerJoined, onPlayerForfeited, onGameStarted, onGameResolved } = {}) {
         this.escrow = escrow;
         this.fee = fee;
         this.gameLoop = gameLoop;
-        this.runningGames = new Set();
-
-        this.onGameCreated = onGameCreated;
-        this.onPlayerJoined = onPlayerJoined;
-        this.onPlayerForfeited = onPlayerForfeited;
-        this.onGameStarted = onGameStarted;
-        this.onGameResolved = onGameResolved;
-
-        this.lastProcessedBlock = null;
+        this.handlers = { GameCreated: onGameCreated, PlayerJoined: onPlayerJoined, PlayerForfeited: onPlayerForfeited, GameStarted: onGameStarted, GameResolved: onGameResolved };
+        this.running = new Set();
+        this.lastBlock = null;
     }
 
-    // Governor actions (only these need to live on Governor)
-    async startGame(gameId) { return this.escrow.startGame(gameId); }
-    async resolveGame(gameId, losers, governorFee = this.fee) {
-        return this.escrow.resolveGame(gameId, losers, governorFee);
-    }
+    startGame(gameId)                    { return this.escrow.startGame(gameId); }
+    resolveGame(gameId, losers)          { return this.escrow.resolveGame(gameId, losers, this.fee); }
+    getMyGames(opts)                     { return this.escrow.getGames({ governor: this.escrow.wallet.address, ...opts }); }
 
-    // ── Event processing ──
-
-    async scanForEvents(fromBlock, toBlock) {
-        return await this.escrow.provider.getLogs({
-            address: this.escrow.contractAddress,
-            fromBlock,
-            toBlock,
-        });
-    }
-
-    async processEvents(logs) {
-        const contract = this.escrow.getContract();
-
+    async _processEvents(logs) {
         for (const log of logs) {
             try {
-                const parsed = contract.interface.parseLog(log);
+                const parsed = this.escrow.contract.interface.parseLog(log);
                 if (!parsed) continue;
-
                 const { name, args } = parsed;
-                let gameId, game;
-                if (args.gameId !== undefined) {
-                    gameId = args.gameId;
-                    game = await contract.getGame(gameId);
+                const gameId = args.gameId;
+                const game = gameId !== undefined ? await this.escrow.contract.getGame(gameId) : undefined;
+
+                await this.handlers[name]?.(gameId, game, args);
+
+                if (name === 'GameStarted' && this.gameLoop && game.governor.toLowerCase() === this.escrow.wallet.address.toLowerCase()) {
+                    if (game.state !== 2n && !this.running.has(`${gameId}`)) this._runLoop(gameId, game);
                 }
-
-                switch (name) {
-                    case 'GameCreated':
-                        if (this.onGameCreated) {
-                            await this.onGameCreated(gameId, game, { creator: args.creator, stakeAmount: args.stakeAmount });
-                        }
-                        break;
-
-                    case 'PlayerJoined':
-                        if (this.onPlayerJoined) {
-                            await this.onPlayerJoined(gameId, game, { player: args.player });
-                        }
-                        break;
-
-                    case 'PlayerForfeited':
-                        if (this.onPlayerForfeited) {
-                            await this.onPlayerForfeited(gameId, game, { player: args.player });
-                        }
-                        break;
-
-                    case 'GameStarted':
-                        if (this.onGameStarted) {
-                            await this.onGameStarted(gameId, game);
-                        }
-
-                        // Auto-invoke gameLoop when we're the governor
-                        if (this.gameLoop && game.governor.toLowerCase() === this.escrow.wallet.address.toLowerCase()) {
-                            if (game.state === 2n) {
-                                console.log(`[Governor] Game ${gameId} already resolved, skipping`);
-                                break;
-                            }
-                            if (this.runningGames.has(gameId.toString())) {
-                                console.log(`[Governor] Game ${gameId} already running, skipping`);
-                                break;
-                            }
-
-                            this.runningGames.add(gameId.toString());
-                            this._runGameLoop(gameId, game).catch(error => {
-                                console.error(`[Governor] Game ${gameId} loop error:`, error);
-                            }).finally(() => {
-                                this.runningGames.delete(gameId.toString());
-                            });
-                        }
-                        break;
-
-                    case 'GameResolved':
-                        if (this.onGameResolved) {
-                            await this.onGameResolved(gameId, game, {
-                                winners: args.winners,
-                                losers: args.losers,
-                            });
-                        }
-                        break;
-                }
-            } catch (error) {
-                console.error(`[Governor] Error processing event:`, error);
-            }
+            } catch (e) { console.error('[Governor] event error:', e); }
         }
     }
 
-    async _runGameLoop(gameId, game) {
-        console.log(`[Governor] Starting game loop for game ${gameId}`);
-        try {
-            // gameLoop receives (gameId, game, resolve)
-            // resolve(losers) is the atomic resolution call
-            await this.gameLoop(gameId, game, async (losers) => {
-                await this.resolveGame(gameId, losers);
-                console.log(`[Governor] Game ${gameId} resolved`);
-            });
-        } catch (error) {
-            console.error(`[Governor] Error in game loop for game ${gameId}:`, error);
-            throw error;
-        }
+    _runLoop(gameId, game) {
+        this.running.add(`${gameId}`);
+        this.gameLoop(gameId, game, losers => this.resolveGame(gameId, losers))
+            .catch(e => console.error(`[Governor] game ${gameId} error:`, e))
+            .finally(() => this.running.delete(`${gameId}`));
     }
 
-    // Recover games that are started but not resolved (crash recovery)
-    async recoverUnresolvedGames() {
-        if (!this.gameLoop) return;
-        console.log(`[Governor] Scanning for unresolved games...`);
+    async start(interval = 10000) {
+        console.log(`[Governor] ${this.escrow.wallet.address}`);
+        this.lastBlock = await this.escrow.provider.getBlockNumber();
 
-        try {
-            const contract = this.escrow.getContract();
-            const gameIds = await contract.getGames(this.escrow.wallet.address, false, true, false, 0n, 100n);
-            console.log(`[Governor] Found ${gameIds.length} ongoing games`);
-
-            for (const gameId of gameIds) {
-                const game = await contract.getGame(gameId);
-                if (game.state === 1n) {
-                    if (this.runningGames.has(gameId.toString())) continue;
-                    console.log(`[Governor] Recovering game ${gameId}`);
-                    this.runningGames.add(gameId.toString());
-                    this._runGameLoop(gameId, game).catch(error => {
-                        console.error(`[Governor] Game ${gameId} recovery error:`, error);
-                    }).finally(() => {
-                        this.runningGames.delete(gameId.toString());
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('[Governor] Error during recovery:', error);
+        // Recover any started-but-unresolved games
+        if (this.gameLoop) {
+            const games = await this.getMyGames({ state: 'started' });
+            games.filter(g => !this.running.has(`${g.id}`)).forEach(g => this._runLoop(g.id, g));
         }
-    }
-
-    async start(pollingIntervalMs = 10000) {
-        console.log(`[Governor] Address: ${this.escrow.wallet.address}`);
-        console.log(`[Governor] Monitoring events every ${pollingIntervalMs}ms`);
-
-        const currentBlock = await this.escrow.provider.getBlockNumber();
-        this.lastProcessedBlock = currentBlock;
-        console.log(`[Governor] Starting from block ${currentBlock}`);
-
-        await this.recoverUnresolvedGames();
 
         while (true) {
             try {
-                const currentBlock = await this.escrow.provider.getBlockNumber();
-
-                if (this.lastProcessedBlock < currentBlock) {
-                    const logs = await this.scanForEvents(this.lastProcessedBlock + 1n, currentBlock);
-                    if (logs.length > 0) {
-                        console.log(`[Governor] 📡 Found ${logs.length} events in blocks ${this.lastProcessedBlock + 1n}-${currentBlock}`);
-                        await this.processEvents(logs);
-                    }
-                    this.lastProcessedBlock = currentBlock;
+                const block = await this.escrow.provider.getBlockNumber();
+                if (block > this.lastBlock) {
+                    const logs = await this.escrow.provider.getLogs({ address: this.escrow.contract.target, fromBlock: this.lastBlock + 1n, toBlock: block });
+                    if (logs.length) await this._processEvents(logs);
+                    this.lastBlock = block;
                 }
-
-                const balance = await this.escrow.getBalance();
-                console.log(`[Governor] Block: ${currentBlock}, Balance: ${ethers.formatEther(balance)}`);
-            } catch (error) {
-                console.error('[Governor] Error in monitoring loop:', error);
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
+                console.log(`[Governor] block ${block}, balance ${ethers.formatEther(await this.escrow.getBalance())}`);
+            } catch (e) { console.error('[Governor] loop error:', e); }
+            await new Promise(r => setTimeout(r, interval));
         }
     }
 }

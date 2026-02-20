@@ -33,8 +33,23 @@ await escrow.joinGame(gameId, stakeAmount);
 await escrow.startGame(gameId);
 await escrow.resolveGame(gameId, [loserAddress], governorFeePercent);
 
-// Read ops (use getContract() for anything else)
-const game = await escrow.getGame(gameId);
+// Query games
+const openGames     = await escrow.getGames({ state: 'open' });
+const myGames       = await escrow.getGames({ governor: myAddress });
+const myStarted     = await escrow.getGames({ governor: myAddress, state: 'started' });
+const pastGames     = await escrow.getGames({ governor: myAddress, state: 'resolved', limit: 20n });
+
+// Watch for changes (polls every 10s, fires callback only when results change)
+const stop = escrow.watchGames({ state: 'open', interval: 5000 }, (games) => {
+  console.log('Open games updated:', games);
+});
+stop(); // cancel polling
+
+// Owner ops
+await escrow.setHouseFee(5);   // 5%
+await escrow.withdraw();
+
+// Raw contract access for anything else
 const contract = escrow.getContract();
 ```
 

@@ -96,9 +96,9 @@ export const writeToContract = async (
         abi: contractABI,
         functionName: functionName as any,
         args: args as any,
-        value,
+        value: value as bigint,
         chain: null,
-    })
+    } as any)
 }
 
 function App() {

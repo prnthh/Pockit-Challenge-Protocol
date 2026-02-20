@@ -14,7 +14,7 @@ export const CHAINS = {
     },
     sepolia: {
         chain: sepolia,
-        contractAddress: '0xdD8D06f2FFf260536ea4B8bcd34E06B03d5Af2D8',
+        contractAddress: '0xB587Be5607CEDdDc6049E7Ad5EcF6523916A0868',
         faucetUrl: 'https://sepoliafaucet.com/',
     },
 } as const

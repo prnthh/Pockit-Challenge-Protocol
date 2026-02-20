@@ -13,8 +13,9 @@
   margin-bottom: 0.5rem;
   font-size: 2rem;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #2d2d44;
+  color: #1a5276;
   letter-spacing: 0.5px;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.5);
 }
 
 .wallet-info {
@@ -31,11 +32,11 @@
   font-weight: 800;
   border-radius: 50px;
   cursor: pointer;
-  background: #ff6b6b;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
   color: white;
-  border: 3px solid #e55a5a;
+  border: 3px solid #558b2f;
   transition: all 0.15s;
-  box-shadow: 0 3px 0 #c94444;
+  box-shadow: 0 3px 0 #33691e;
   font-family: 'Nunito', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -43,30 +44,30 @@
 
 .connect-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 0 #c94444;
+  box-shadow: 0 5px 0 #33691e;
 }
 
 .connect-button:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 0 #c94444;
+  box-shadow: 0 1px 0 #33691e;
 }
 
 .wallet-address {
   font-size: 0.75rem;
   opacity: 0.7;
   margin: 0;
-  color: #5a5a7a;
+  color: #1a5276;
 }
 
 .balance {
   font-size: 0.9rem;
   font-weight: 800;
   padding: 0.35rem 0.8rem;
-  background: #fff3cd;
-  border: 3px solid #ffc107;
+  background: #e3f2fd;
+  border: 3px solid #5aace0;
   border-radius: 50px;
-  color: #856404;
-  box-shadow: 0 2px 0 #d4a106;
+  color: #1a5276;
+  box-shadow: 0 2px 0 #2196f3;
 }
 
 .tiles-container {
@@ -85,19 +86,19 @@
 
 .tile {
   background: #ffffff;
-  border: 3px solid #2d2d44;
+  border: 3px solid #5aace0;
   border-radius: 16px;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   min-height: 300px;
-  box-shadow: 4px 4px 0 #2d2d44;
+  box-shadow: 0 4px 12px rgba(90, 172, 224, 0.3);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .tile:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 #2d2d44;
+  box-shadow: 0 6px 16px rgba(90, 172, 224, 0.4);
 }
 
 .tile h2 {
@@ -105,9 +106,9 @@
   margin-bottom: 0.75rem;
   font-size: 1.15rem;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #2d2d44;
+  color: #1a5276;
   padding-bottom: 0.5rem;
-  border-bottom: 2px dashed #e0d8c8;
+  border-bottom: 2px dashed #b4e4f8;
 }
 
 .form-group {
@@ -122,7 +123,7 @@
   margin-bottom: 0.25rem;
   font-weight: 700;
   font-size: 0.85rem;
-  color: #5a5a7a;
+  color: #1a5276;
 }
 
 .form-group input,
@@ -130,9 +131,9 @@
   width: 100%;
   padding: 0.45rem 0.6rem;
   border-radius: 10px;
-  border: 2px solid #c8c0b0;
-  background: #fefcf7;
-  color: #2d2d44;
+  border: 2px solid #5aace0;
+  background: #eaf6fc;
+  color: #1a5276;
   font-size: 0.85rem;
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
@@ -142,27 +143,27 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #81d4fa;
-  box-shadow: 0 0 0 3px rgba(129, 212, 250, 0.3);
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.3);
 }
 
 .form-group input:disabled,
 .form-group select:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  background: #f0ece3;
+  background: #d4f1ff;
 }
 
 .form-group small {
   opacity: 0.6;
   font-size: 0.7rem;
-  color: #7a7a9a;
+  color: #6e8ca0;
 }
 
 small {
   font-size: 0.7rem;
   display: block;
-  color: #5a5a7a;
+  color: #1a5276;
 }
 
 /* Unified button styles */
@@ -172,12 +173,12 @@ button {
   font-weight: 800;
   border-radius: 50px;
   cursor: pointer;
-  background: #81d4fa;
-  color: #1a5276;
-  border: 2px solid #4fc3f7;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
+  border: 2px solid #558b2f;
   transition: all 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 0 #29b6f6;
+  box-shadow: 0 2px 0 #33691e;
   font-family: 'Nunito', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -185,37 +186,37 @@ button {
 
 button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 0 #29b6f6;
-  background: #6dc9f5;
+  box-shadow: 0 4px 0 #33691e;
+  background: linear-gradient(to bottom, #b5e86a, #8bc34a);
 }
 
 button:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 0px 0 #29b6f6;
+  box-shadow: 0 0px 0 #33691e;
 }
 
 button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  background: #d0ccc3;
-  border-color: #b8b4ab;
-  color: #8a8a8a;
+  background: #b0bec5;
+  border-color: #90a4ae;
+  color: #78909c;
   box-shadow: none;
 }
 
 .primary-button {
   margin-top: auto;
-  background: #a5d6a7;
-  color: #1b5e20;
-  border-color: #81c784;
-  box-shadow: 0 3px 0 #66bb6a;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
+  border-color: #558b2f;
+  box-shadow: 0 3px 0 #33691e;
   font-size: 0.85rem;
   padding: 0.5rem 1rem;
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #8fce91;
-  box-shadow: 0 5px 0 #66bb6a;
+  background: linear-gradient(to bottom, #b5e86a, #8bc34a);
+  box-shadow: 0 5px 0 #33691e;
 }
 
 .games-list {
@@ -227,8 +228,8 @@ button:disabled {
 }
 
 .game-card {
-  background: #fefcf7;
-  border: 2px solid #e0d8c8;
+  background: #eaf6fc;
+  border: 2px solid #5aace0;
   border-radius: 12px;
   padding: 0.6rem;
   display: flex;
@@ -238,7 +239,7 @@ button:disabled {
 }
 
 .game-card:hover {
-  border-color: #c8c0b0;
+  border-color: #2196f3;
 }
 
 .game-header {
@@ -246,26 +247,26 @@ button:disabled {
   flex-direction: column;
   gap: 0.2rem;
   padding-bottom: 0.3rem;
-  border-bottom: 2px dashed #e8e0d0;
+  border-bottom: 2px dashed #b4e4f8;
 }
 
 .game-id {
   font-weight: 800;
   font-size: 0.95rem;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #e85d75;
+  color: #1a5276;
 }
 
 .game-stake {
   font-weight: 800;
-  color: #2e7d32;
+  color: #f57f17;
   font-size: 0.78rem;
-  background: #e8f5e9;
+  background: #fff8e1;
   padding: 0.15rem 0.5rem;
   border-radius: 50px;
   display: inline-block;
   width: fit-content;
-  border: 1px solid #c8e6c9;
+  border: 1px solid #ffca28;
 }
 
 .player-row {
@@ -312,7 +313,7 @@ button:disabled {
   margin: 0;
   opacity: 0.7;
   font-size: 0.8rem;
-  color: #7a7a9a;
+  color: #6e8ca0;
 }
 
 .no-games {
@@ -320,7 +321,7 @@ button:disabled {
   opacity: 0.5;
   padding: 1.5rem;
   font-size: 0.9rem;
-  color: #7a7a9a;
+  color: #6e8ca0;
   font-style: italic;
 }
 
@@ -348,12 +349,12 @@ button:disabled {
   padding: 0.5rem 1.4rem;
   font-size: 0.9rem;
   font-weight: 800;
-  border-radius: 50px;
+  border-radius: 12px;
   cursor: pointer;
-  background: #f0ece3;
-  color: #5a5a7a;
-  border: 3px solid #d0ccc3;
-  box-shadow: 0 2px 0 #b8b4ab;
+  background: linear-gradient(to bottom, #c5e1a5, #aed581);
+  color: #33691e;
+  border: 3px solid #7cb342;
+  box-shadow: 0 3px 0 #689f38;
   font-family: 'Nunito', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -361,16 +362,17 @@ button:disabled {
 }
 
 .page-tab:hover:not(.active) {
-  background: #e8e4db;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 0 #b8b4ab;
+  box-shadow: 0 5px 0 #689f38;
 }
 
 .page-tab.active {
-  background: #ffd54f;
-  color: #5d4037;
-  border-color: #ffca28;
-  box-shadow: 0 3px 0 #f9a825;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
+  border-color: #558b2f;
+  box-shadow: 0 3px 0 #33691e;
 }
 
 /* ============================================
@@ -384,24 +386,24 @@ button:disabled {
 
 .coinflip-container {
   background: #ffffff;
-  border: 3px solid #2d2d44;
+  border: 3px solid #5aace0;
   border-radius: 20px;
   padding: 2rem;
   max-width: 480px;
   width: 100%;
-  box-shadow: 6px 6px 0 #2d2d44;
+  box-shadow: 0 4px 12px rgba(90, 172, 224, 0.3);
   text-align: center;
 }
 
 .coinflip-title {
   font-size: 1.8rem;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #2d2d44;
+  color: #1a5276;
   margin: 0 0 0.25rem 0;
 }
 
 .coinflip-subtitle {
-  color: #7a7a9a;
+  color: #6e8ca0;
   font-size: 0.85rem;
   margin: 0 0 1.5rem 0;
 }
@@ -414,7 +416,7 @@ button:disabled {
 .coinflip-stake label {
   font-weight: 700;
   font-size: 0.85rem;
-  color: #5a5a7a;
+  color: #1a5276;
   display: block;
   margin-bottom: 0.4rem;
 }
@@ -430,32 +432,32 @@ button:disabled {
   padding: 0.35rem 0.7rem;
   font-size: 0.78rem;
   border-radius: 50px;
-  background: #f0ece3;
-  color: #5a5a7a;
-  border: 2px solid #d0ccc3;
-  box-shadow: 0 2px 0 #b8b4ab;
+  background: #eaf6fc;
+  color: #1a5276;
+  border: 2px solid #5aace0;
+  box-shadow: 0 2px 0 #2196f3;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .coinflip-chip.active {
-  background: #ffd54f;
-  color: #5d4037;
-  border-color: #ffca28;
-  box-shadow: 0 2px 0 #f9a825;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
+  border-color: #558b2f;
+  box-shadow: 0 2px 0 #33691e;
 }
 
 .coinflip-chip:hover:not(.active) {
-  background: #e8e4db;
+  background: #d4f1ff;
 }
 
 .coinflip-custom-input {
   width: 70px;
   padding: 0.35rem 0.5rem;
   border-radius: 10px;
-  border: 2px solid #c8c0b0;
-  background: #fefcf7;
-  color: #2d2d44;
+  border: 2px solid #5aace0;
+  background: #eaf6fc;
+  color: #1a5276;
   font-size: 0.8rem;
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
@@ -464,14 +466,14 @@ button:disabled {
 
 .coinflip-custom-input:focus {
   outline: none;
-  border-color: #ffd54f;
-  box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.3);
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.3);
 }
 
 .coinflip-pick-label {
   font-weight: 700;
   font-size: 0.85rem;
-  color: #5a5a7a;
+  color: #1a5276;
   margin: 0 0 0.6rem 0;
   text-align: center;
 }
@@ -506,27 +508,27 @@ button:disabled {
 }
 
 .coinflip-call-btn.heads {
-  background: #fff8e1;
+  background: linear-gradient(to bottom, #ffee58, #f5c842);
   color: #f57f17;
-  border-color: #ffd54f;
-  box-shadow: 0 4px 0 #f9a825;
+  border-color: #f9a825;
+  box-shadow: 0 4px 0 #f57f17;
 }
 
 .coinflip-call-btn.heads:hover:not(:disabled) {
-  background: #fff3cd;
-  box-shadow: 0 6px 0 #f9a825;
+  background: linear-gradient(to bottom, #fff176, #ffca28);
+  box-shadow: 0 6px 0 #f57f17;
 }
 
 .coinflip-call-btn.tails {
-  background: #e8eaf6;
-  color: #283593;
-  border-color: #7986cb;
-  box-shadow: 0 4px 0 #3f51b5;
+  background: linear-gradient(to bottom, #90caf9, #5aace0);
+  color: white;
+  border-color: #2196f3;
+  box-shadow: 0 4px 0 #1565c0;
 }
 
 .coinflip-call-btn.tails:hover:not(:disabled) {
-  background: #dde0f5;
-  box-shadow: 0 6px 0 #3f51b5;
+  background: linear-gradient(to bottom, #a8d8f0, #7ec8e3);
+  box-shadow: 0 6px 0 #1565c0;
 }
 
 .coinflip-call-btn:disabled {
@@ -551,7 +553,7 @@ button:disabled {
 
 .coinflip-status {
   font-weight: 700;
-  color: #2d2d44;
+  color: #1a5276;
   font-size: 0.95rem;
   margin: 0;
 }
@@ -578,8 +580,8 @@ button:disabled {
   align-items: center;
   padding: 0.5rem 1.5rem;
   border-radius: 12px;
-  background: #f5f5f5;
-  border: 2px solid #e0e0e0;
+  background: #eaf6fc;
+  border: 2px solid #5aace0;
   min-width: 80px;
   transition: all 0.3s;
 }
@@ -593,7 +595,7 @@ button:disabled {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #7a7a9a;
+  color: #6e8ca0;
   letter-spacing: 0.5px;
 }
 
@@ -601,13 +603,13 @@ button:disabled {
   font-size: 2rem;
   font-weight: 800;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #2d2d44;
+  color: #1a5276;
   line-height: 1;
 }
 
 .score-vs {
   font-weight: 800;
-  color: #c8c0b0;
+  color: #b4e4f8;
   font-size: 0.9rem;
   text-transform: uppercase;
 }
@@ -647,7 +649,7 @@ button:disabled {
   font-size: 1.1rem;
   font-weight: 800;
   font-family: 'Fredoka One', 'Comic Sans MS', cursive;
-  color: #2d2d44;
+  color: #1a5276;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -691,15 +693,15 @@ button:disabled {
 }
 
 .round-dot.pending {
-  background: #f0ece3;
-  color: #b8b4ab;
-  border: 2px solid #d0ccc3;
+  background: #eaf6fc;
+  color: #6e8ca0;
+  border: 2px solid #5aace0;
 }
 
 .round-dot.active {
-  background: #fff3cd;
+  background: #ffee58;
   color: #f57f17;
-  border: 2px solid #ffd54f;
+  border: 2px solid #f9a825;
   animation: pulse-dot 0.6s ease-in-out infinite alternate;
 }
 
@@ -728,7 +730,7 @@ button:disabled {
   gap: 0.4rem;
   padding: 1.5rem;
   border-radius: 16px;
-  border: 3px solid;
+  border: 3px solid #5aace0;
   width: 100%;
 }
 
@@ -764,33 +766,33 @@ button:disabled {
 .final-amount {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #5a5a7a;
+  color: #1a5276;
 }
 
 .final-status {
   font-size: 0.75rem;
-  color: #7a7a9a;
+  color: #6e8ca0;
 }
 
 .final-gameid {
   font-size: 0.7rem;
-  color: #b8b4ab;
+  color: #b4e4f8;
 }
 
 .coinflip-play-again {
   margin-top: 0.8rem;
   padding: 0.5rem 1.5rem;
   font-size: 0.9rem;
-  background: #ffd54f;
-  color: #5d4037;
-  border-color: #ffca28;
-  box-shadow: 0 3px 0 #f9a825;
+  background: linear-gradient(to bottom, #a8e063, #7cb342);
+  color: white;
+  border-color: #558b2f;
+  box-shadow: 0 3px 0 #33691e;
   border-radius: 50px;
 }
 
 .coinflip-play-again:hover:not(:disabled) {
-  background: #ffcd38;
-  box-shadow: 0 5px 0 #f9a825;
+  background: linear-gradient(to bottom, #b5e86a, #8bc34a);
+  box-shadow: 0 5px 0 #33691e;
 }
 
 /* ============================================

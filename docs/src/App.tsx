@@ -178,8 +178,8 @@ function App() {
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-6">
-            <header className="text-center mb-6">
-                <h1 className="font-heading text-4xl md:text-5xl text-ink tracking-tight leading-tight">
+            <header className="text-center mb-6 bg-[#b4e4f8] border-b-4 border-[#5aace0] rounded-b-3xl px-6 py-5 shadow-lg mx-[-1rem] mt-[-1.5rem] mb-8">
+                <h1 className="font-heading text-4xl md:text-5xl text-[#1a5276] tracking-tight leading-tight drop-shadow-[0_2px_0_rgba(255,255,255,0.5)]">
                     Pockit Challenge Protocol
                 </h1>
 
@@ -187,7 +187,7 @@ function App() {
                     <select
                         value={selectedChain}
                         onChange={(e) => setSelectedChain(e.target.value as ChainKey)}
-                        className="px-3 py-1.5 text-xs font-bold font-body border-3 border-ink bg-card text-ink rounded-full cursor-pointer hover:bg-yellow transition-colors"
+                        className="px-3 py-1.5 text-xs font-bold font-body border-3 border-[#5aace0] bg-white text-[#1a5276] rounded-full cursor-pointer hover:bg-[#d4f1ff] transition-colors shadow-md"
                     >
                         <option value="mainnet">Ethereum Mainnet</option>
                         <option value="sepolia">Sepolia Testnet</option>
@@ -197,31 +197,31 @@ function App() {
                 <div className="flex flex-wrap items-center justify-center gap-4 mt-3">
                     <div className="flex gap-3">
                         <a href="https://github.com/prnthh/Pockit-Challenge-Protocol/" target="_blank" rel="noopener noreferrer"
-                            className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
+                            className="font-bold text-[#1a5276] hover:text-[#0d3b54] hover:underline decoration-wavy">
                             GitHub
                         </a>
                         {CHAIN_CONFIG.faucetUrl && (
                             <a href={CHAIN_CONFIG.faucetUrl} target="_blank" rel="noopener noreferrer"
-                                className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
+                                className="font-bold text-[#1a5276] hover:text-[#0d3b54] hover:underline decoration-wavy">
                                 Get {viemChain.nativeCurrency.symbol}
                             </a>
                         )}
                         <a href="https://remix.ethereum.org/#url=https://raw.githubusercontent.com/prnthh/Pockit-Challenge-Protocol/main/contracts/contract.sol"
                             target="_blank" rel="noopener noreferrer"
-                            className="font-bold text-pink hover:text-pink-dark hover:underline decoration-wavy">
+                            className="font-bold text-[#1a5276] hover:text-[#0d3b54] hover:underline decoration-wavy">
                             Open in Remix
                         </a>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={connectWallet}
-                            className="px-4 py-2 bg-pink text-white font-bold rounded-full border-3 border-ink shadow-[3px_3px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all cursor-pointer text-sm"
+                            className="px-4 py-2 bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white font-bold rounded-full border-3 border-[#558b2f] shadow-[0_3px_0_#33691e] hover:shadow-[0_1px_0_#33691e] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px] transition-all cursor-pointer text-sm"
                         >
                             {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}
                         </button>
                         <div
                             onClick={() => walletAddress && updateBalance(walletAddress)}
-                            className={`px-3 py-1.5 bg-card border-3 border-ink rounded-full text-sm font-bold shadow-[2px_2px_0_var(--color-ink)] ${walletAddress ? 'cursor-pointer hover:bg-yellow transition-colors' : ''}`}
+                            className={`px-3 py-1.5 bg-white border-3 border-[#5aace0] rounded-full text-sm font-bold shadow-[0_2px_0_#2196f3] ${walletAddress ? 'cursor-pointer hover:bg-[#d4f1ff] transition-colors' : ''}`}
                         >
                             {balance}
                         </div>
@@ -229,21 +229,21 @@ function App() {
                 </div>
             </header>
 
-            <nav className="flex justify-center gap-2 mb-6">
+            <nav className="flex justify-center gap-3 mb-6">
                 <button
                     onClick={() => setActivePage('dashboard')}
-                    className={`px-5 py-2.5 font-bold rounded-full border-3 border-ink text-sm transition-all cursor-pointer ${activePage === 'dashboard'
-                            ? 'bg-orange text-ink shadow-[3px_3px_0_var(--color-ink)]'
-                            : 'bg-card text-ink shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[3px_3px_0_var(--color-ink)]'
+                    className={`px-6 py-2.5 font-bold rounded-xl text-sm transition-all cursor-pointer border-3 ${activePage === 'dashboard'
+                            ? 'bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white border-[#558b2f] shadow-[0_3px_0_#33691e]'
+                            : 'bg-gradient-to-b from-[#c5e1a5] to-[#aed581] text-[#33691e] border-[#7cb342] shadow-[0_3px_0_#689f38] hover:from-[#a8e063] hover:to-[#7cb342] hover:text-white'
                         }`}
                 >
                     📋 Dashboard
                 </button>
                 <button
                     onClick={() => setActivePage('coinflip')}
-                    className={`px-5 py-2.5 font-bold rounded-full border-3 border-ink text-sm transition-all cursor-pointer ${activePage === 'coinflip'
-                            ? 'bg-cyan text-ink shadow-[3px_3px_0_var(--color-ink)]'
-                            : 'bg-card text-ink shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[3px_3px_0_var(--color-ink)]'
+                    className={`px-6 py-2.5 font-bold rounded-xl text-sm transition-all cursor-pointer border-3 ${activePage === 'coinflip'
+                            ? 'bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white border-[#558b2f] shadow-[0_3px_0_#33691e]'
+                            : 'bg-gradient-to-b from-[#c5e1a5] to-[#aed581] text-[#33691e] border-[#7cb342] shadow-[0_3px_0_#689f38] hover:from-[#a8e063] hover:to-[#7cb342] hover:text-white'
                         }`}
                 >
                     🪙 Coin Flip

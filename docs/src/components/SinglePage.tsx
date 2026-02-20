@@ -16,7 +16,7 @@ function GameHeader({ gameId, governor, stake, currencySymbol }: {
         <div className="mb-2">
             <div className="font-heading text-lg text-ink">Game #{gameId.toString()}</div>
             <small className="text-muted text-xs">Governor: {governor.slice(0, 6)}...{governor.slice(-4)}</small>
-            <div className="text-sm font-bold text-orange mt-0.5">Stake: {formatEther(stake)} {currencySymbol}</div>
+            <div className="text-sm font-bold text-[#f5a623] mt-0.5">Stake: {formatEther(stake)} {currencySymbol}</div>
         </div>
     )
 }
@@ -43,7 +43,7 @@ function PlayerRow({
     const statusText = isWinner ? ' (Winner)' : isLoser ? ' (Loser)' : hasForfeited ? ' (Forfeited)' : ''
 
     return (
-        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg odd:bg-cream/50">
+        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg odd:bg-[#e3f2fd]/50">
             <span className={`text-sm ${statusClass}`}>
                 {player.slice(0, 6)}...{player.slice(-4)}{statusText}
             </span>
@@ -51,9 +51,9 @@ function PlayerRow({
                 <button
                     onClick={() => onToggleLoser(player)}
                     disabled={!walletAddress}
-                    className={`px-3 py-1 text-xs font-bold rounded-full border-2 border-ink cursor-pointer transition-all ${isSelectedLoser
+                    className={`px-3 py-1 text-xs font-bold rounded-full border-2 cursor-pointer transition-all ${isSelectedLoser
                             ? 'bg-red text-white border-red'
-                            : 'bg-card text-ink hover:bg-pink hover:text-white'
+                            : 'bg-white text-ink border-[#5aace0] hover:bg-[#e74c3c] hover:text-white hover:border-[#c0392b]'
                         }`}
                 >
                     {isSelectedLoser ? '✗ Unmark' : 'Mark Loser'}
@@ -110,8 +110,8 @@ function CreateGameTile({
     }
 
     return (
-        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
-            <h2 className="font-heading text-xl mb-4">Create a Game</h2>
+        <div className="bg-white border-3 border-[#5aace0] rounded-2xl p-5 shadow-[0_4px_12px_rgba(90,172,224,0.3)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-4 text-[#1a5276]">Create a Game</h2>
 
             <div className="mb-4">
                 <label htmlFor="governor-input" className="block text-sm font-bold mb-1">Governor Address:</label>
@@ -122,20 +122,20 @@ function CreateGameTile({
                     value={governorAddress}
                     onChange={(e) => setGovernorAddress(e.target.value)}
                     disabled={!walletAddress}
-                    className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
+                    className="w-full px-3 py-2 border-2 border-[#5aace0] rounded-xl text-sm font-body bg-[#eaf6fc] focus:outline-none focus:ring-2 focus:ring-[#4fc3f7] disabled:opacity-50"
                 />
                 <div className="flex gap-2 mt-2">
                     <button
                         onClick={() => handlePrefillSelect('player')}
                         disabled={!walletAddress}
-                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-white border-2 border-[#5aace0] rounded-full shadow-[0_2px_0_#2196f3] hover:bg-[#d4f1ff] hover:shadow-[0_1px_0_#2196f3] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                     >
                         My Address
                     </button>
                     <button
                         onClick={() => handlePrefillSelect('coinflip')}
                         disabled={!walletAddress}
-                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-yellow hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                        className="flex-1 px-3 py-1.5 text-xs font-bold bg-white border-2 border-[#5aace0] rounded-full shadow-[0_2px_0_#2196f3] hover:bg-[#d4f1ff] hover:shadow-[0_1px_0_#2196f3] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                     >
                         Coinflip Governor
                     </button>
@@ -152,19 +152,19 @@ function CreateGameTile({
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         disabled={!walletAddress}
-                        className="flex-1 px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
+                        className="flex-1 px-3 py-2 border-2 border-[#5aace0] rounded-xl text-sm font-body bg-[#eaf6fc] focus:outline-none focus:ring-2 focus:ring-[#4fc3f7] disabled:opacity-50"
                     />
                     <button
                         onClick={() => setAmount((prev) => { const c = parseFloat(prev) || 0; return (c + 0.1).toFixed(1) })}
                         disabled={!walletAddress}
-                        className="px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-lime transition-all cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1.5 text-xs font-bold bg-white border-2 border-[#5aace0] rounded-full shadow-[0_2px_0_#2196f3] hover:bg-[#c5e1a5] transition-all cursor-pointer disabled:opacity-50"
                     >
                         +0.1
                     </button>
                     <button
                         onClick={() => setAmount((prev) => { const c = parseFloat(prev) || 0; return (c + 1).toString() })}
                         disabled={!walletAddress}
-                        className="px-3 py-1.5 text-xs font-bold bg-card border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:bg-lime transition-all cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1.5 text-xs font-bold bg-white border-2 border-[#5aace0] rounded-full shadow-[0_2px_0_#2196f3] hover:bg-[#c5e1a5] transition-all cursor-pointer disabled:opacity-50"
                     >
                         +1
                     </button>
@@ -181,13 +181,13 @@ function CreateGameTile({
                         value={whitelistInput}
                         onChange={(e) => setWhitelistInput(e.target.value)}
                         disabled={!walletAddress}
-                        className="flex-1 px-3 py-2 border-2 border-ink rounded-xl text-sm font-body bg-cream focus:outline-none focus:ring-2 focus:ring-pink disabled:opacity-50"
+                        className="flex-1 px-3 py-2 border-2 border-[#5aace0] rounded-xl text-sm font-body bg-[#eaf6fc] focus:outline-none focus:ring-2 focus:ring-[#4fc3f7] disabled:opacity-50"
                     />
                     <div className="flex items-center shrink-0">
                         <button
                             onClick={() => setMaxPlayers((prev) => { const c = parseInt(prev) || 0; return c > 0 ? (c - 1).toString() : '0' })}
                             disabled={!walletAddress}
-                            className="px-2 py-2 text-sm font-bold bg-card border-2 border-ink rounded-l-lg cursor-pointer hover:bg-yellow transition-colors disabled:opacity-50"
+                            className="px-2 py-2 text-sm font-bold bg-white border-2 border-[#5aace0] rounded-l-lg cursor-pointer hover:bg-[#d4f1ff] transition-colors disabled:opacity-50"
                         >−</button>
                         <input
                             type="text"
@@ -197,12 +197,12 @@ function CreateGameTile({
                             onChange={(e) => setMaxPlayers(e.target.value.replace(/[^0-9]/g, ''))}
                             disabled={!walletAddress}
                             title="Max Players (0 or empty = unlimited)"
-                            className="w-9 text-center py-2 text-sm border-y-2 border-ink bg-cream font-bold disabled:opacity-50 focus:outline-none"
+                            className="w-9 text-center py-2 text-sm border-y-2 border-[#5aace0] bg-[#eaf6fc] font-bold disabled:opacity-50 focus:outline-none"
                         />
                         <button
                             onClick={() => setMaxPlayers((prev) => { const c = parseInt(prev) || 0; return (c + 1).toString() })}
                             disabled={!walletAddress}
-                            className="px-2 py-2 text-sm font-bold bg-card border-2 border-ink rounded-r-lg cursor-pointer hover:bg-yellow transition-colors disabled:opacity-50"
+                            className="px-2 py-2 text-sm font-bold bg-white border-2 border-[#5aace0] rounded-r-lg cursor-pointer hover:bg-[#d4f1ff] transition-colors disabled:opacity-50"
                         >+</button>
                     </div>
                 </div>
@@ -210,7 +210,7 @@ function CreateGameTile({
             </div>
 
             <button onClick={createGame} disabled={!walletAddress}
-                className="w-full py-2.5 bg-pink text-white font-bold rounded-full border-3 border-ink shadow-[4px_4px_0_var(--color-ink)] hover:shadow-[2px_2px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2.5 bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white font-bold rounded-full border-3 border-[#558b2f] shadow-[0_4px_0_#33691e] hover:shadow-[0_2px_0_#33691e] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 Create Game
             </button>
@@ -246,8 +246,8 @@ function JoinGameTile({
         executeWrite('forfeit game', 'forfeitGame', [gameId])
 
     return (
-        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
-            <h2 className="font-heading text-xl mb-4">Join a Game</h2>
+        <div className="bg-white border-3 border-[#5aace0] rounded-2xl p-5 shadow-[0_4px_12px_rgba(90,172,224,0.3)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-4 text-[#1a5276]">Join a Game</h2>
 
             <div className="space-y-3">
                 {openGames.length > 0 ? (
@@ -261,7 +261,7 @@ function JoinGameTile({
                         const isFull = game.maxPlayers > 0n && game.players?.length >= Number(game.maxPlayers)
 
                         return (
-                            <div key={game.id.toString()} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                            <div key={game.id.toString()} className="bg-[#eaf6fc] border-2 border-[#5aace0] rounded-xl p-4 shadow-[0_2px_6px_rgba(90,172,224,0.2)]">
                                 <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
                                 <small className="block text-xs text-muted">
@@ -277,7 +277,7 @@ function JoinGameTile({
                                         onClick={() => joinGame(game.id, game.stakeAmount)}
                                         disabled={!walletAddress || !isWhitelisted || isFull}
                                         title={isFull ? 'Game is full' : (!isWhitelisted ? 'You are not whitelisted for this game' : '')}
-                                        className="mt-2 w-full py-2 text-sm font-bold bg-lime border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="mt-2 w-full py-2 text-sm font-bold bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white border-2 border-[#558b2f] rounded-full shadow-[0_2px_0_#33691e] hover:shadow-[0_1px_0_#33691e] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isFull ? '🚫 Full' : (isWhitelisted ? 'Join' : '🔒 Not Whitelisted')}
                                     </button>
@@ -285,7 +285,7 @@ function JoinGameTile({
                                     <button
                                         onClick={() => forfeitGame(game.id)}
                                         disabled={!walletAddress || !!hasForfeited}
-                                        className="mt-2 w-full py-2 text-sm font-bold bg-red text-white border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                        className="mt-2 w-full py-2 text-sm font-bold bg-gradient-to-b from-[#ef5350] to-[#c62828] text-white border-2 border-[#b71c1c] rounded-full shadow-[0_2px_0_#7f0000] hover:shadow-[0_1px_0_#7f0000] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                                     >
                                         {hasForfeited ? 'Forfeited' : 'Forfeit'}
                                     </button>
@@ -364,8 +364,8 @@ function GovernGamesTile({
     }
 
     return (
-        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
-            <h2 className="font-heading text-xl mb-1">Govern Games</h2>
+        <div className="bg-white border-3 border-[#5aace0] rounded-2xl p-5 shadow-[0_4px_12px_rgba(90,172,224,0.3)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-1 text-[#1a5276]">Govern Games</h2>
             <p className="text-sm text-muted mb-4">Manage games where you are the governor (5% fee).</p>
 
             <div className="space-y-3">
@@ -376,7 +376,7 @@ function GovernGamesTile({
                         const poolSplit = calculatePoolSplit(game, loserSet)
 
                         return (
-                            <div key={key} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                            <div key={key} className="bg-[#eaf6fc] border-2 border-[#5aace0] rounded-xl p-4 shadow-[0_2px_6px_rgba(90,172,224,0.2)]">
                                 <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
                                 <small className="block text-xs font-bold mb-2">
@@ -402,7 +402,7 @@ function GovernGamesTile({
                                 </div>
 
                                 {game.state === 1 && (
-                                    <div className="bg-purple/15 border-2 border-purple rounded-xl p-3 text-xs space-y-0.5 mb-3">
+                                    <div className="bg-[#e3f2fd] border-2 border-[#90caf9] rounded-xl p-3 text-xs space-y-0.5 mb-3">
                                         <strong className="text-sm">Pool Split Preview:</strong>
                                         <div>Total: {formatEther(poolSplit.totalPool)} {currencySymbol}</div>
                                         <div>Fee (5%): {formatEther(poolSplit.governorFee)} {currencySymbol}</div>
@@ -416,14 +416,14 @@ function GovernGamesTile({
                                     <>
                                         {game.state === 0 && (
                                             <button onClick={() => doStartGame(game.id)} disabled={!walletAddress}
-                                                className="w-full py-2 text-sm font-bold bg-cyan border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                                className="w-full py-2 text-sm font-bold bg-gradient-to-b from-[#4fc3f7] to-[#039be5] text-white border-2 border-[#0277bd] rounded-full shadow-[0_2px_0_#01579b] hover:shadow-[0_1px_0_#01579b] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                                             >
                                                 Start Game {game.players.length === 1 && '(1P)'}
                                             </button>
                                         )}
                                         {game.state === 1 && (
                                             <button onClick={() => doResolveGame(game.id)} disabled={!walletAddress || (game.players.length > 1 && loserSet.size === 0)}
-                                                className="w-full py-2 text-sm font-bold bg-orange border-2 border-ink rounded-full shadow-[2px_2px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
+                                                className="w-full py-2 text-sm font-bold bg-gradient-to-b from-[#ffca28] to-[#f5a623] text-[#5d4037] border-2 border-[#e65100] rounded-full shadow-[0_2px_0_#bf360c] hover:shadow-[0_1px_0_#bf360c] hover:translate-y-[1px] transition-all cursor-pointer disabled:opacity-50"
                                             >
                                                 {game.players.length === 1 ? 'Resolve Game (1P Win)' : `Resolve Game (${loserSet.size} losers)`}
                                             </button>
@@ -450,8 +450,8 @@ function PastGamesTile({
     currencySymbol: string
 }) {
     return (
-        <div className="bg-card border-3 border-ink rounded-2xl p-5 shadow-[4px_4px_0_var(--color-ink)] animate-fade-in">
-            <h2 className="font-heading text-xl mb-1">Past Games History</h2>
+        <div className="bg-white border-3 border-[#5aace0] rounded-2xl p-5 shadow-[0_4px_12px_rgba(90,172,224,0.3)] animate-fade-in">
+            <h2 className="font-heading text-xl mb-1 text-[#1a5276]">Past Games History</h2>
             <p className="text-sm text-muted mb-4">View completed games where you were the governor.</p>
 
             <div className="space-y-3">
@@ -461,7 +461,7 @@ function PastGamesTile({
                             list.some(p => p.toLowerCase() === addr.toLowerCase())
                         const winners = game.players.filter(p => !inList(p, game.losers) && !inList(p, game.forfeited))
                         return (
-                            <div key={game.id.toString()} className="bg-cream border-2 border-ink rounded-xl p-4 shadow-[2px_2px_0_var(--color-ink)]">
+                            <div key={game.id.toString()} className="bg-[#eaf6fc] border-2 border-[#5aace0] rounded-xl p-4 shadow-[0_2px_6px_rgba(90,172,224,0.2)]">
                                 <GameHeader gameId={game.id} governor={game.governor} stake={game.stakeAmount} currencySymbol={currencySymbol} />
 
                                 <small className="block text-xs text-muted mb-2">Players: {game.players.length}</small>

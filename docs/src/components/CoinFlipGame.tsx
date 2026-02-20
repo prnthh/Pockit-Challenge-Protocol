@@ -130,8 +130,8 @@ function CoinFlipGame({
 
     return (
         <div className="flex justify-center py-4">
-            <div className="w-full max-w-md bg-card border-3 border-ink rounded-2xl p-6 shadow-[4px_4px_0_var(--color-ink)] text-center">
-                <h2 className="font-heading text-3xl mb-1">🪙 Coin Flip</h2>
+            <div className="w-full max-w-md bg-white border-3 border-[#5aace0] rounded-2xl p-6 shadow-[0_4px_12px_rgba(90,172,224,0.3)] text-center">
+                <h2 className="font-heading text-3xl mb-1 text-[#1a5276]">🪙 Coin Flip</h2>
                 <p className="text-sm text-muted mb-5">Best 2 out of 3 — pick your side!</p>
 
                 {/* Stake Input */}
@@ -143,9 +143,9 @@ function CoinFlipGame({
                                 <button
                                     key={v}
                                     onClick={() => setAmount(v)}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-ink cursor-pointer transition-all ${amount === v
-                                            ? 'bg-orange text-ink shadow-[2px_2px_0_var(--color-ink)]'
-                                            : 'bg-card text-ink hover:bg-yellow'
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-[#5aace0] cursor-pointer transition-all ${amount === v
+                                            ? 'bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white border-[#558b2f] shadow-[0_2px_0_#33691e]'
+                                            : 'bg-white text-ink hover:bg-[#d4f1ff]'
                                         }`}
                                 >
                                     {v}
@@ -156,7 +156,7 @@ function CoinFlipGame({
                                 value={amount}
                                 onChange={e => setAmount(e.target.value)}
                                 placeholder="Custom"
-                                className="w-20 px-2 py-1.5 text-xs text-center border-2 border-ink rounded-full bg-cream font-bold focus:outline-none focus:ring-2 focus:ring-pink"
+                                className="w-20 px-2 py-1.5 text-xs text-center border-2 border-[#5aace0] rounded-full bg-[#eaf6fc] font-bold focus:outline-none focus:ring-2 focus:ring-[#4fc3f7]"
                             />
                         </div>
 
@@ -165,7 +165,7 @@ function CoinFlipGame({
                             <button
                                 onClick={() => startCoinFlipGame('heads')}
                                 disabled={!walletAddress}
-                                className="flex flex-col items-center gap-1 px-6 py-4 bg-yellow border-3 border-ink rounded-2xl shadow-[4px_4px_0_var(--color-ink)] hover:shadow-[2px_2px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex flex-col items-center gap-1 px-6 py-4 bg-gradient-to-b from-[#ffee58] to-[#f5c842] border-3 border-[#f9a825] rounded-2xl shadow-[0_4px_0_#f57f17] hover:shadow-[0_2px_0_#f57f17] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span className="text-3xl">🌕</span>
                                 <span className="font-bold text-sm">Heads</span>
@@ -173,14 +173,14 @@ function CoinFlipGame({
                             <button
                                 onClick={() => startCoinFlipGame('tails')}
                                 disabled={!walletAddress}
-                                className="flex flex-col items-center gap-1 px-6 py-4 bg-purple/30 border-3 border-ink rounded-2xl shadow-[4px_4px_0_var(--color-ink)] hover:shadow-[2px_2px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex flex-col items-center gap-1 px-6 py-4 bg-gradient-to-b from-[#90caf9] to-[#5aace0] border-3 border-[#2196f3] rounded-2xl shadow-[0_4px_0_#1565c0] hover:shadow-[0_2px_0_#1565c0] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span className="text-3xl">🌑</span>
                                 <span className="font-bold text-sm">Tails</span>
                             </button>
                         </div>
                         {!walletAddress && (
-                            <small className="text-pink text-xs">Connect your wallet to play</small>
+                            <small className="text-[#1a5276] text-xs">Connect your wallet to play</small>
                         )}
                     </div>
                 )}
@@ -235,13 +235,13 @@ function CoinFlipGame({
                             {[0, 1, 2].map(i => (
                                 <div
                                     key={i}
-                                    className={`w-10 h-10 rounded-full border-3 border-ink flex items-center justify-center font-bold text-sm transition-all ${rounds[i]
+                                    className={`w-10 h-10 rounded-full border-3 border-[#5aace0] flex items-center justify-center font-bold text-sm transition-all ${rounds[i]
                                             ? rounds[i].won
-                                                ? 'bg-lime text-ink shadow-[2px_2px_0_var(--color-ink)]'
-                                                : 'bg-red text-white shadow-[2px_2px_0_var(--color-ink)]'
+                                                ? 'bg-[#8bc34a] text-white shadow-[0_2px_0_#558b2f]'
+                                                : 'bg-red text-white shadow-[0_2px_0_#b71c1c]'
                                             : i === rounds.length && isFlipping
-                                                ? 'bg-yellow animate-pulse-dot'
-                                                : 'bg-cream text-muted'
+                                                ? 'bg-[#ffee58] animate-pulse-dot'
+                                                : 'bg-[#eaf6fc] text-muted'
                                         }`}
                                 >
                                     {rounds[i] ? (rounds[i].won ? '✓' : '✗') : (i + 1)}
@@ -251,7 +251,7 @@ function CoinFlipGame({
 
                         {/* Final Result */}
                         {finalResult && (
-                            <div className={`animate-pop-in border-3 border-ink rounded-2xl p-5 mt-2 ${finalResult === 'won' ? 'bg-lime/20' : 'bg-red/10'
+                            <div className={`animate-pop-in border-3 border-[#5aace0] rounded-2xl p-5 mt-2 ${finalResult === 'won' ? 'bg-[#e8f5e9]' : 'bg-[#ffebee]'
                                 }`}>
                                 <div className="text-5xl mb-2">
                                     {finalResult === 'won' ? '🎉' : '😔'}
@@ -271,7 +271,7 @@ function CoinFlipGame({
                                 )}
                                 <button
                                     onClick={resetGame}
-                                    className="mt-4 px-6 py-2.5 bg-pink text-white font-bold rounded-full border-3 border-ink shadow-[3px_3px_0_var(--color-ink)] hover:shadow-[1px_1px_0_var(--color-ink)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none transition-all cursor-pointer text-sm"
+                                    className="mt-4 px-6 py-2.5 bg-gradient-to-b from-[#a8e063] to-[#7cb342] text-white font-bold rounded-full border-3 border-[#558b2f] shadow-[0_3px_0_#33691e] hover:shadow-[0_1px_0_#33691e] hover:translate-y-[2px] active:shadow-none transition-all cursor-pointer text-sm"
                                 >
                                     Play Again
                                 </button>

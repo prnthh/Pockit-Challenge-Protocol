@@ -77,7 +77,6 @@ contract GameEscrow is ReentrancyGuard {
         uint256 maxPlayers,
         address[] calldata whitelist
     ) external payable returns (uint256) {
-        require(stakeAmount > 0, "Stake must be positive");
         require(msg.value == stakeAmount, "Incorrect stake");
         require(governor != address(0), "Invalid governor");
 
@@ -149,9 +148,11 @@ contract GameEscrow is ReentrancyGuard {
 
         emit PlayerForfeited(gameId, msg.sender);
 
-        // interaction
-        (bool success, ) = msg.sender.call{value: game.stakeAmount}("");
-        require(success, "Refund failed");
+        // interaction — skip transfer for free games
+        if (game.stakeAmount > 0) {
+            (bool success, ) = msg.sender.call{value: game.stakeAmount}("");
+            require(success, "Refund failed");
+        }
 
         // Auto-resolve if no active players remain
         if (game.activePlayers == 0) {
@@ -242,8 +243,10 @@ contract GameEscrow is ReentrancyGuard {
                     winners[wi] = p;
                     uint256 payout = prizePerWinner;
                     if (wi == 0) payout += dust; // first winner gets dust
-                    (bool ok, ) = p.call{value: payout}("");
-                    require(ok, "Payout failed");
+                    if (payout > 0) {
+                        (bool ok, ) = p.call{value: payout}("");
+                        require(ok, "Payout failed");
+                    }
                     unchecked { ++wi; }
                 }
                 unchecked { ++i; }
